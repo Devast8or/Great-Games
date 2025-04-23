@@ -1,0 +1,128 @@
+/* Responsive styles */
+
+/* Tablets */
+@media (max-width: 992px) {
+    #games-list {
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    }
+    
+    .pitcher-stats {
+        font-size: 0.8rem;
+        max-width: 140px;
+    }
+    
+    .pitcher-img {
+        width: 140px;
+        height: 140px;
+    }
+}
+
+/* Large Mobile */
+@media (max-width: 768px) {
+    #games-list {
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    }
+    
+    .date-picker {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    #game-date {
+        width: 100%;
+    }
+    
+    #load-games {
+        width: 100%;
+    }
+    
+    .filter-options {
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+    
+    .expand-btn {
+        padding: 0.6rem;
+        font-size: 0.9rem;
+    }
+    
+    .lineups-container {
+        padding: 1rem;
+    }
+    
+    .lineup-table {
+        font-size: 0.8rem;
+    }
+    
+    .button-container {
+        gap: 0.7rem;
+    }
+    
+    .pitcher-img {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .pitcher-name {
+        max-width: 140px;
+    }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+    #games-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .container {
+        padding: 0 15px;
+    }
+    
+    .teams {
+        padding: 1rem;
+    }
+    
+    .team-logo {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .game-info {
+        padding: 1rem;
+    }
+    
+    .expand-btn {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .lineup h4 {
+        font-size: 0.9rem;
+    }
+    
+    .lineup-table th, 
+    .lineup-table td {
+        padding: 0.3rem;
+    }
+    
+    .button-container {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .pitcher-img {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .pitcher-name {
+        max-width: 100px;
+        font-size: 0.8rem;
+    }
+    
+    .reveal-btn {
+        order: -1;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}

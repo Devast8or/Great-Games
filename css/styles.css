@@ -1,0 +1,510 @@
+/* CSS Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #002d72; /* MLB blue */
+    --secondary-color: #e03a3e; /* MLB red */
+    --background-color: #f5f5f5;
+    --card-bg-color: white;
+    --text-color: #333;
+    --border-color: #ddd;
+    --shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    color: var(--text-color);
+    background-color: var(--background-color);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Header Styles */
+header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 1.5rem 0;
+    text-align: center;
+    box-shadow: var(--shadow);
+}
+
+/* Controls Section */
+.controls {
+    background-color: var(--card-bg-color);
+    padding: 1.5rem;
+    margin: 2rem 0;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+.date-picker {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+#game-date {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+#load-games {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+#load-games:hover {
+    background-color: #001c48;
+}
+
+.filters h3 {
+    margin-bottom: 1rem;
+}
+
+.filter-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.filter-options label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+/* Games Container */
+.games-container {
+    margin-bottom: 2rem;
+}
+
+.hidden {
+    display: none;
+}
+
+#loading, #error-message, #no-games {
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.2rem;
+}
+
+#error-message {
+    color: var(--secondary-color);
+}
+
+/* Game Cards */
+#games-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.game-card {
+    background-color: var(--card-bg-color);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    max-width: 100%;
+    width: 100%;
+}
+
+.game-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.teams {
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    width: 40%;
+}
+
+.vs {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.team-logo {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    background-color: white;
+    border-radius: 50%;
+    padding: 5px;
+}
+
+.team-name {
+    font-weight: bold;
+    text-align: center;
+}
+
+.pitcher {
+    font-size: 0.8rem;
+    text-align: center;
+    font-style: italic;
+    opacity: 0.9;
+    margin-top: 0.2rem;
+}
+
+.game-info {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.stadium {
+    margin-bottom: 1rem;
+    color: #666;
+}
+
+.rating {
+    margin-bottom: 1.5rem;
+}
+
+.stars {
+    color: gold;
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+}
+
+.reveal-btn {
+    flex: 1;
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 0;
+    transition: var(--transition);
+}
+
+.reveal-btn:hover {
+    background-color: #bc2a2e;
+}
+
+.score {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.watch-links {
+    margin-top: 1rem;
+}
+
+.watch-links a {
+    display: inline-block;
+    color: var(--primary-color);
+    text-decoration: none;
+    margin: 0 0.5rem;
+}
+
+.watch-links a:hover {
+    text-decoration: underline;
+}
+
+/* Button container and pitcher images */
+.button-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* VS Score Container */
+.vs-score-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.top-reveal-btn {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: var(--transition);
+    margin: 0.5rem 0;
+}
+
+.top-reveal-btn:hover {
+    background-color: #bc2a2e;
+}
+
+.top-score {
+    font-size: 1.2rem;
+    font-weight: bold;
+    background-color: #f1f1f1;
+    border-radius: 4px;
+    padding: 0.3rem 0.6rem;
+}
+
+/* Pitcher containers and images */
+.pitchers-container {
+    display: flex;
+    justify-content: space-around;
+    margin: 1.5rem 0;
+    gap: 2rem;
+}
+
+.pitcher-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pitcher-img {
+    width: 180px;  /* Increased from 150px */
+    height: 180px; /* Increased from 150px */
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: #f0f0f0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.pitcher-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.pitcher-img.hidden, .pitcher-container.hidden {
+    display: none;
+}
+
+.pitcher-stats {
+    font-size: 0.8rem;
+    color: #666;
+    text-align: center;
+    max-width: 180px;
+    margin-top: 0.2rem;
+}
+
+/* Footer */
+footer {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 1.5rem 0;
+    text-align: center;
+    margin-top: 2rem;
+}
+
+/* Lineup Styles */
+.lineup-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 0.5rem;
+    transition: var(--transition);
+}
+
+.lineup-btn:hover {
+    background-color: #001c48;
+}
+
+.lineups-container {
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.lineups-container.hidden {
+    display: none;
+}
+
+.lineup {
+    flex: 1;
+    min-width: 0; /* Allow lineup to shrink below min-content width */
+}
+
+.lineup h4 {
+    color: var(--primary-color);
+    margin-bottom: 0.8rem;
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 0.3rem;
+    white-space: nowrap;
+}
+
+.lineup-loading, .error, .no-lineup {
+    padding: 1rem 0;
+    color: #666;
+    font-style: italic;
+}
+
+.error {
+    color: var(--secondary-color);
+}
+
+.lineup-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    table-layout: fixed; /* Force fixed table layout */
+}
+
+.lineup-table th {
+    background-color: #f0f0f0;
+    padding: 0.5rem;
+    text-align: left;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.lineup-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.lineup-table th,
+.lineup-table td {
+    height: 2.5rem; /* Set fixed height for all cells */
+    padding: 0.5rem;
+    vertical-align: middle; /* Center content vertically */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap; /* Prevent text wrapping */
+}
+
+.lineup-table tr:last-child td {
+    border-bottom: none;
+}
+
+.lineup-table tr:hover td {
+    background-color: #f9f9f9;
+}
+
+/* Column widths for lineup table */
+.lineup-table th:nth-child(1),
+.lineup-table td:nth-child(1) {
+    width: 10%;
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* Player image styles */
+.player-img-cell {
+    text-align: center;
+    padding: 0.25rem !important;
+}
+
+.player-small-img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: #f0f0f0;
+    vertical-align: middle;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.lineup-table th:nth-child(2),
+.lineup-table td:nth-child(2) {
+    width: 10%;
+}
+
+.lineup-table th:nth-child(3),
+.lineup-table td:nth-child(3) {
+    width: 25%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lineup-table th:nth-child(4),
+.lineup-table td:nth-child(4),
+.lineup-table th:nth-child(5),
+lineup-table td:nth-child(5),
+lineup-table th:nth-child(6),
+lineup-table td:nth-child(6),
+lineup-table th:nth-child(7),
+lineup-table td:nth-child(7),
+lineup-table th:nth-child(8),
+lineup-table td:nth-child(8),
+lineup-table th:nth-child(9),
+lineup-table td:nth-child(9) {
+    width: 9%;
+    text-align: center;
+}
+
+/* Arrow Button and Lineups Container Styles */
+.expand-btn {
+    display: block;
+    width: 100%;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 0 0 8px 8px;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: var(--transition);
+    text-align: center;
+    font-weight: bold;
+}
+
+.expand-btn:hover {
+    background-color: #001c48;
+}
+
+.expand-btn .arrow-down,
+.expand-btn .arrow-up {
+    display: inline-block;
+    margin-right: 0.5rem;
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+}
+
+/* Responsive handling for lineups */
+@media (max-width: 768px) {
+    .lineups-container {
+        flex-direction: column;
+    }
+    
+    .lineup {
+        width: 100%;
+    }
+}
