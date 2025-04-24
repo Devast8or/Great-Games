@@ -219,6 +219,73 @@ header {
     margin-bottom: 1rem;
 }
 
+/* Box score table (R-H-E format) */
+.box-score-table {
+    width: 100%;
+    max-width: 280px; /* Reduced from 400px */
+    margin: 0 auto 0.5rem;
+    border-collapse: collapse;
+    font-size: 0.9rem; /* Reduced from 1.1rem */
+    background-color: #f8f8f8;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.box-score-table th, .box-score-table td {
+    padding: 0.3rem 0.4rem; /* Reduced padding */
+    text-align: center;
+    border: 1px solid #ddd;
+}
+
+.box-score-table th {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.box-score-table th:first-child {
+    width: 30%; /* Reduced from 40% */
+    text-align: center; /* Changed from left */
+    background-color: var(--primary-color);
+}
+
+/* Team logo cell in box score */
+.team-logo-cell {
+    text-align: center;
+    padding: 0.2rem !important;
+}
+
+/* Team logo in box score */
+.score-team-logo {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background-color: white;
+    object-fit: contain;
+    vertical-align: middle;
+    padding: 1px;
+    border: 1px solid #ddd;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.box-score-table .runs-cell {
+    font-weight: bold;
+}
+
+/* Add a bit more styling to emphasize the winning team */
+.box-score-table tr.winner {
+    background-color: rgba(0, 45, 114, 0.1);
+}
+
+/* Innings info for extra innings games */
+.innings-info {
+    font-size: 0.75rem; /* Reduced from 0.9rem */
+    color: #666;
+    margin-top: 0.3rem;
+    font-style: italic;
+}
+
 .watch-links {
     margin-top: 1rem;
 }

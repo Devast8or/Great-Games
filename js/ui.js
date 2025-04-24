@@ -329,51 +329,10 @@ const UI = {
         }
         
         // Set venue and game time
-        gameElement.querySelector('.stadium').textContent = game.venue;
-        
-        // Replace stars with game time
-        const starsElement = gameElement.querySelector('.stars');
-        starsElement.textContent = game.gameTime;
-        
-        const ratingLabelElement = gameElement.querySelector('.rating-label');
-        if (ratingLabelElement) {
-            ratingLabelElement.textContent = 'Game Time';
-        }
-        
-        // Get the reveal button and remove it (not needed for future games)
-        const revealBtn = gameElement.querySelector('.reveal-btn');
-        if (revealBtn && revealBtn.parentNode) {
-            revealBtn.parentNode.removeChild(revealBtn);
-        }
-        
-        // Remove score element (not needed for future games)
-        const scoreElement = gameElement.querySelector('.score');
-        if (scoreElement && scoreElement.parentNode) {
-            scoreElement.parentNode.removeChild(scoreElement);
-        }
-        
-        // Remove watch links completely
-        const watchLinksContainer = gameElement.querySelector('.watch-links');
-        if (watchLinksContainer && watchLinksContainer.parentNode) {
-            watchLinksContainer.parentNode.removeChild(watchLinksContainer);
-        }
-        
-        // Create pitcher containers
-        const pitcherContainer = this.createPitcherElements(game, gameElement);
-        
-        // Add pitcher container to the game info container
-        const gameInfoContainer = gameElement.querySelector('.game-info');
-        gameInfoContainer.insertBefore(pitcherContainer, gameInfoContainer.firstChild);
-        
-        // Add "Upcoming Game" label
-        const upcomingLabel = document.createElement('div');
-        upcomingLabel.className = 'upcoming-label';
-        upcomingLabel.textContent = 'Upcoming Game';
-        upcomingLabel.style.color = 'var(--secondary-color)';
-        upcomingLabel.style.fontWeight = 'bold';
-        upcomingLabel.style.marginBottom = '1rem';
-        
-        gameInfoContainer.insertBefore(upcomingLabel, gameInfoContainer.firstChild);
+        const gameDate = new Date(game.gameDate);
+        const gameTimeStr = gameDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        gameElement.querySelector('.stadium').textContent = game.venue?.name || 'Unknown Venue';
+        gameElement.querySelector('.game-time').textContent = gameTimeStr;
         
         return gameElement;
     },
@@ -595,17 +554,112 @@ const UI = {
         
         // Set venue
         gameElement.querySelector('.stadium').textContent = game.venue;
+
+        // Create a new better box score display
+        const scoreElement = gameElement.querySelector('.score');
+        // Clear any existing content
+        scoreElement.innerHTML = '';
         
-        // Set scores (hidden by default)
-        gameElement.querySelector('.away-score').textContent = game.awayTeam.score;
-        gameElement.querySelector('.home-score').textContent = game.homeTeam.score;
+        // Create a table for the box score (R-H-E format)
+        const boxScoreTable = document.createElement('table');
+        boxScoreTable.className = 'box-score-table';
+        
+        // Header row with R-H-E labels
+        const headerRow = document.createElement('tr');
+        const emptyHeader = document.createElement('th');
+        headerRow.appendChild(emptyHeader);
+        
+        const runsHeader = document.createElement('th');
+        runsHeader.textContent = 'R';
+        runsHeader.title = 'Runs';
+        
+        const hitsHeader = document.createElement('th');
+        hitsHeader.textContent = 'H';
+        hitsHeader.title = 'Hits';
+        
+        const errorsHeader = document.createElement('th');
+        errorsHeader.textContent = 'E';
+        errorsHeader.title = 'Errors';
+        
+        headerRow.appendChild(runsHeader);
+        headerRow.appendChild(hitsHeader);
+        headerRow.appendChild(errorsHeader);
+        boxScoreTable.appendChild(headerRow);
+        
+        // Away team row
+        const awayRow = document.createElement('tr');
+        const awayLabel = document.createElement('td');
+        awayLabel.className = 'team-logo-cell';
+        
+        // Create small logo image for away team
+        const awayLogoImg = document.createElement('img');
+        awayLogoImg.src = game.awayTeam.logoUrl;
+        awayLogoImg.alt = game.awayTeam.name;
+        awayLogoImg.title = game.awayTeam.name;
+        awayLogoImg.className = 'score-team-logo';
+        awayLabel.appendChild(awayLogoImg);
+        
+        const awayRuns = document.createElement('td');
+        awayRuns.textContent = game.awayTeam.score;
+        awayRuns.className = 'runs-cell';
+        
+        const awayHits = document.createElement('td');
+        awayHits.textContent = game.awayTeam.hits;
+        
+        const awayErrors = document.createElement('td');
+        awayErrors.textContent = game.awayTeam.errors;
+        
+        awayRow.appendChild(awayLabel);
+        awayRow.appendChild(awayRuns);
+        awayRow.appendChild(awayHits);
+        awayRow.appendChild(awayErrors);
+        boxScoreTable.appendChild(awayRow);
+        
+        // Home team row
+        const homeRow = document.createElement('tr');
+        const homeLabel = document.createElement('td');
+        homeLabel.className = 'team-logo-cell';
+        
+        // Create small logo image for home team
+        const homeLogoImg = document.createElement('img');
+        homeLogoImg.src = game.homeTeam.logoUrl;
+        homeLogoImg.alt = game.homeTeam.name;
+        homeLogoImg.title = game.homeTeam.name;
+        homeLogoImg.className = 'score-team-logo';
+        homeLabel.appendChild(homeLogoImg);
+        
+        const homeRuns = document.createElement('td');
+        homeRuns.textContent = game.homeTeam.score;
+        homeRuns.className = 'runs-cell';
+        
+        const homeHits = document.createElement('td');
+        homeHits.textContent = game.homeTeam.hits;
+        
+        const homeErrors = document.createElement('td');
+        homeErrors.textContent = game.homeTeam.errors;
+        
+        homeRow.appendChild(homeLabel);
+        homeRow.appendChild(homeRuns);
+        homeRow.appendChild(homeHits);
+        homeRow.appendChild(homeErrors);
+        boxScoreTable.appendChild(homeRow);
+        
+        // Add the box score table to the score element
+        scoreElement.appendChild(boxScoreTable);
+        
+        // Add innings info if it's an extra innings game
+        if (game.isExtraInnings) {
+            const inningsInfo = document.createElement('div');
+            inningsInfo.className = 'innings-info';
+            inningsInfo.textContent = `${game.innings} innings`;
+            scoreElement.appendChild(inningsInfo);
+        }
         
         // Create pitcher containers
         const pitcherContainer = this.createPitcherElements(game, gameElement);
         
         // Add pitcher container to the game info container before the score element
         const gameInfoContainer = gameElement.querySelector('.game-info');
-        const scoreElement = gameElement.querySelector('.score');
         gameInfoContainer.insertBefore(pitcherContainer, scoreElement);
         
         // Create VS section reveal button container

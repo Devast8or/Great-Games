@@ -98,6 +98,12 @@ const Parser = {
         const totalRuns = awayTeam.score + homeTeam.score;
         const runDifference = Math.abs(awayTeam.score - homeTeam.score);
         
+        // Extract hits and errors from linescore
+        const awayHits = game.linescore?.teams?.away?.hits || 0;
+        const awayErrors = game.linescore?.teams?.away?.errors || 0;
+        const homeHits = game.linescore?.teams?.home?.hits || 0;
+        const homeErrors = game.linescore?.teams?.home?.errors || 0;
+        
         // Get media/watch links if available
         let watchLinks = [];
         if (game.content && game.content.media && game.content.media.epg) {
@@ -120,6 +126,8 @@ const Parser = {
                 name: awayTeam.team.name,
                 logoUrl: API.getTeamLogoUrl(awayTeam.team.id),
                 score: awayTeam.score,
+                hits: awayHits,
+                errors: awayErrors,
                 pitcher: awayPitcher,
                 lineup: [] // Will be populated later
             },
@@ -128,6 +136,8 @@ const Parser = {
                 name: homeTeam.team.name,
                 logoUrl: API.getTeamLogoUrl(homeTeam.team.id),
                 score: homeTeam.score,
+                hits: homeHits,
+                errors: homeErrors,
                 pitcher: homePitcher,
                 lineup: [] // Will be populated later
             },
