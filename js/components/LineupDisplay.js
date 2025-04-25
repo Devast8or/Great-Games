@@ -1,11 +1,15 @@
 /**
  * LineupDisplay component for showing team lineups
  */
+import PlayerDetailPanel from './PlayerDetailPanel.js';
+
 class LineupDisplay {
     constructor(teamType, lineup = []) {
         this.teamType = teamType;
         this.lineup = lineup;
         this.element = null;
+        this.playerPanel = new PlayerDetailPanel(teamType);
+        this.activePlayerId = null;
     }
 
     /**
@@ -56,6 +60,8 @@ class LineupDisplay {
         // Player rows
         this.lineup.forEach((player, index) => {
             const row = document.createElement('tr');
+            row.className = 'player-row';
+            row.dataset.playerId = player.id;
             row.innerHTML = `
                 <td class="player-img-cell">
                     ${player.id ? `
@@ -74,10 +80,40 @@ class LineupDisplay {
                 <td>${player.stats.hr}</td>
                 <td>${player.stats.rbi}</td>
             `;
+
+            // Add click handler for player details
+            row.addEventListener('click', () => this.showPlayerDetails(player));
             table.appendChild(row);
         });
         
         return table;
+    }
+
+    /**
+     * Show player details in panel
+     * @param {Object} player - Player data to display
+     */
+    showPlayerDetails(player) {
+        if (this.playerPanel.isShowingPlayer(player)) {
+            this.playerPanel.close();
+            return;
+        }
+
+        // Update row highlighting
+        if (this.element) {
+            this.element.querySelectorAll('.player-row').forEach(row => {
+                row.classList.toggle('active-player', row.dataset.playerId === player.id);
+            });
+        }
+
+        this.playerPanel.show(player, () => {
+            // Remove row highlighting when panel is closed
+            if (this.element) {
+                this.element.querySelectorAll('.player-row').forEach(row => {
+                    row.classList.remove('active-player');
+                });
+            }
+        });
     }
 
     /**

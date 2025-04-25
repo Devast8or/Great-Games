@@ -3,6 +3,7 @@
  */
 import Utils from '../utils.js';
 import { API } from '../api.js';
+import LineupDisplay from './LineupDisplay.js';
 
 class GameCard {
     constructor(game, options = {}) {
@@ -413,74 +414,21 @@ class GameCard {
             this.game.awayTeam.lineup = lineups.away;
             this.game.homeTeam.lineup = lineups.home;
             
-            ['away', 'home'].forEach(teamType => {
-                const teamContainer = container.querySelector(`.${teamType}-lineup`);
-                this.renderLineup(this.game[teamType + 'Team'].lineup, teamContainer);
-            });
+            // Create LineupDisplay components
+            const awayLineup = new LineupDisplay('away', this.game.awayTeam.lineup);
+            const homeLineup = new LineupDisplay('home', this.game.homeTeam.lineup);
+            
+            // Clear existing content and append new lineup displays
+            container.innerHTML = '';
+            container.appendChild(awayLineup.render());
+            container.appendChild(homeLineup.render());
+            
         } catch (error) {
             console.error('Error loading lineups:', error);
             container.querySelectorAll('.lineup').forEach(el => {
                 el.querySelector('.lineup-loading').textContent = 'Error loading lineup';
             });
         }
-    }
-
-    /**
-     * Render a team's lineup
-     * @param {Array} lineup - Lineup data
-     * @param {HTMLElement} container - Container element
-     */
-    renderLineup(lineup, container) {
-        container.innerHTML = `<h4>${container.querySelector('h4').textContent}</h4>`;
-        
-        if (!lineup?.length) {
-            container.innerHTML += '<div class="no-lineup">No lineup data available</div>';
-            return;
-        }
-        
-        const table = document.createElement('table');
-        table.className = 'lineup-table';
-        
-        // Header row
-        table.innerHTML = `
-            <tr>
-                <th>Player</th>
-                <th>Pos</th>
-                <th>Name</th>
-                <th>GP</th>
-                <th>AVG</th>
-                <th>OBP</th>
-                <th>OPS</th>
-                <th>HR</th>
-                <th>RBI</th>
-            </tr>
-        `;
-        
-        // Player rows
-        lineup.forEach((player, index) => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="player-img-cell">
-                    ${player.id ? `
-                        <img class="player-small-img"
-                             src="https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_45,q_auto:best/v1/people/${player.id}/headshot/67/current"
-                             alt="${player.name}"
-                             title="${player.name}">
-                    ` : index + 1}
-                </td>
-                <td>${player.position}</td>
-                <td>${player.name}</td>
-                <td>${player.stats.gamesPlayed}</td>
-                <td>${player.stats.avg}</td>
-                <td>${player.stats.obp}</td>
-                <td>${player.stats.ops}</td>
-                <td>${player.stats.hr}</td>
-                <td>${player.stats.rbi}</td>
-            `;
-            table.appendChild(row);
-        });
-        
-        container.appendChild(table);
     }
 
     /**

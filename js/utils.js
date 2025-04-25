@@ -30,11 +30,21 @@ const Utils = {
         if (type === 'batting') {
             return {
                 gamesPlayed: stats?.gamesPlayed || '0',
+                atBats: stats?.atBats || '0',
+                runs: stats?.runs || '0',
+                hits: stats?.hits || '0',
+                doubles: stats?.doubles || '0',
+                triples: stats?.triples || '0',
+                hr: stats?.homeRuns || '0',
+                rbi: stats?.rbi || '0',
+                baseOnBalls: stats?.baseOnBalls || '0',
+                strikeOuts: stats?.strikeOuts || '0',
+                stolenBases: stats?.stolenBases || '0',
+                caughtStealing: stats?.caughtStealing || '0',
                 avg: stats?.avg || '.000',
                 obp: stats?.obp || '.000',
-                ops: stats?.ops || '.000',
-                hr: stats?.homeRuns || '0',
-                rbi: stats?.rbi || '0'
+                slg: stats?.slg || '.000',
+                ops: stats?.ops || '.000'
             };
         } else if (type === 'pitching') {
             return {

@@ -568,3 +568,113 @@ footer .container {
     border-radius: 4px;
     margin: 1rem 0;
 }
+
+/* Player Detail Panel */
+.player-detail-panel {
+    position: fixed;
+    top: 0;
+    height: 100vh;
+    width: 350px;
+    background-color: var(--card-bg-color);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    z-index: 1000;
+    transition: transform 0.3s ease-in-out;
+    overflow-y: auto;
+}
+
+.panel-away {
+    left: 0;
+    transform: translateX(-100%);
+    border-right: 4px solid var(--primary-color);
+}
+
+.panel-home {
+    right: 0;
+    transform: translateX(100%);
+    border-left: 4px solid var(--primary-color);
+}
+
+.panel-active {
+    transform: translateX(0);
+}
+
+.player-detail-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+.player-detail-close:hover {
+    color: var(--secondary-color);
+}
+
+.player-detail-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.player-detail-img {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    display: block;
+    object-fit: cover;
+    background-color: #f0f0f0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.player-detail-name {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: var(--primary-color);
+}
+
+.player-detail-position {
+    font-size: 1.1rem;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.player-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.stat-item {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* Player Detail Panel Transitions */
+.panel-content {
+    opacity: 1;
+    transition: opacity 0.15s ease-in-out;
+}
+
+.panel-transitioning .panel-content {
+    transition: opacity 0.15s ease-in-out;
+}
