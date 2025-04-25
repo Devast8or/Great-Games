@@ -126,3 +126,154 @@
         margin-bottom: 0.5rem;
     }
 }
+
+/* Box score table responsive styles */
+@media (max-width: 768px) {
+    .score {
+        padding: 0.25rem;
+        margin: 1rem -0.5rem;  /* Reduce negative margin */
+        border-radius: 4px;    /* Keep some border radius on mobile */
+    }
+
+    .box-score-table {
+        font-size: 0.75rem;
+        margin: 0 auto;  /* Ensure centering on mobile */
+    }
+    
+    .box-score-table th,
+    .box-score-table td {
+        padding: 0.3rem 0.4rem;  /* Slightly reduce padding */
+        min-width: 25px;
+    }
+
+    .team-logo-cell {
+        width: 32px;
+    }
+
+    .score-team-logo {
+        width: 24px;
+        height: 24px;
+    }
+
+    .box-score-table td.runs-cell {
+        font-size: 0.9rem;
+    }
+
+    /* Pitcher responsive styles */
+    .pitchers-container {
+        gap: 1rem;
+    }
+
+    .pitcher-img {
+        width: 120px;
+        height: 120px;
+    }
+
+    .pitcher-name {
+        font-size: 0.9rem;
+    }
+
+    .pitcher-stats {
+        font-size: 0.75rem;
+        max-width: 120px;
+    }
+
+    /* Lineup responsive styles */
+    .lineups-container {
+        flex-direction: column;
+        padding: 1rem;
+        gap: 2rem;
+    }
+
+    .lineup {
+        width: 100%;
+    }
+
+    .lineup h4 {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .lineup-table {
+        font-size: 0.8rem;
+    }
+
+    .lineup-table th,
+    .lineup-table td {
+        padding: 0.4rem;
+    }
+
+    .player-small-img {
+        width: 25px;
+        height: 25px;
+    }
+
+    /* Ensure horizontal scrolling for lineup tables on mobile */
+    .lineup {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+@media (max-width: 480px) {
+    .score {
+        padding: 0.25rem;
+        margin: 1rem -0.25rem;  /* Further reduce negative margin */
+    }
+
+    .box-score-table th,
+    .box-score-table td {
+        padding: 0.25rem 0.3rem;  /* Further reduce padding */
+        min-width: 22px;
+    }
+
+    .team-logo-cell {
+        width: 28px;
+    }
+
+    .score-team-logo {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* Ensure horizontal scrolling works smoothly on mobile */
+    .score {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Pitcher styles for small screens */
+    .pitcher-img {
+        width: 100px;
+        height: 100px;
+    }
+
+    .pitcher-name {
+        font-size: 0.85rem;
+    }
+
+    .pitcher-stats {
+        font-size: 0.7rem;
+        max-width: 100px;
+    }
+
+    /* Lineup styles for small screens */
+    .lineup-table {
+        font-size: 0.75rem;
+    }
+
+    .lineup-table th,
+    .lineup-table td {
+        padding: 0.3rem;
+    }
+
+    .player-small-img {
+        width: 22px;
+        height: 22px;
+    }
+
+    /* Keep expand button visible on small screens */
+    .expand-btn {
+        font-size: 0.9rem;
+        padding: 0.6rem;
+    }
+}

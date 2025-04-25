@@ -1,122 +1,66 @@
 /**
  * Parser module for processing MLB game data
  */
+import Utils from './utils.js';
+import { API } from './api.js';
 
-const Parser = {
+export class Parser {
     /**
      * Process API response data into a usable game format
      * @param {Object} apiData - Raw API response
      * @returns {Array} - Array of processed game objects
      */
-    processGames(apiData) {
-        console.log("Parser: Processing games data");
-        
-        if (!apiData.dates || apiData.dates.length === 0) {
-            console.log("Parser: No dates found in API response");
-            return [];
-        }
+    static processGames(apiData) {
+        if (!apiData.dates?.length) return [];
         
         const games = [];
         
-        // The MLB API returns dates with games
         apiData.dates.forEach(date => {
-            if (date.games && date.games.length > 0) {
-                console.log(`Parser: Processing ${date.games.length} games for date ${date.date}`);
-                
-                date.games.forEach(game => {
-                    // Only include completed games
-                    if (game.status.abstractGameState === 'Final') {
-                        try {
-                            const processedGame = this.processGameData(game);
-                            games.push(processedGame);
-                        } catch (error) {
-                            console.error(`Parser: Error processing game ${game.gamePk}:`, error);
-                            // Continue with other games even if one fails
-                        }
+            if (!date.games?.length) return;
+            
+            date.games.forEach(game => {
+                if (game.status.abstractGameState === 'Final') {
+                    try {
+                        games.push(this.processGameData(game));
+                    } catch (error) {
+                        console.error(`Error processing game ${game.gamePk}:`, error);
                     }
-                });
-            } else {
-                console.log(`Parser: No games found for date ${date.date}`);
-            }
+                }
+            });
         });
         
-        console.log(`Parser: Processed ${games.length} completed games`);
         return games;
-    },
-    
+    }
+
     /**
      * Process individual game data
      * @param {Object} game - Raw game data
      * @returns {Object} - Processed game object
      */
-    processGameData(game) {
-        // Extract teams data
+    static processGameData(game) {
         const awayTeam = game.teams.away;
         const homeTeam = game.teams.home;
-        
-        // Get starting pitchers if available
-        let awayPitcher = null;
-        if (awayTeam.probablePitcher) {
-            // Handle different API response formats
-            if (awayTeam.probablePitcher.fullName) {
-                awayPitcher = {
-                    id: awayTeam.probablePitcher.id,
-                    name: awayTeam.probablePitcher.fullName,
-                    stats: null // Stats will be loaded separately when needed
-                };
-            } else if (awayTeam.probablePitcher.firstName && awayTeam.probablePitcher.lastName) {
-                awayPitcher = {
-                    id: awayTeam.probablePitcher.id,
-                    name: `${awayTeam.probablePitcher.firstName} ${awayTeam.probablePitcher.lastName}`,
-                    stats: null // Stats will be loaded separately when needed
-                };
-            }
-        }
-        
-        let homePitcher = null;
-        if (homeTeam.probablePitcher) {
-            // Handle different API response formats
-            if (homeTeam.probablePitcher.fullName) {
-                homePitcher = {
-                    id: homeTeam.probablePitcher.id,
-                    name: homeTeam.probablePitcher.fullName,
-                    stats: null // Stats will be loaded separately when needed
-                };
-            } else if (homeTeam.probablePitcher.firstName && homeTeam.probablePitcher.lastName) {
-                homePitcher = {
-                    id: homeTeam.probablePitcher.id,
-                    name: `${homeTeam.probablePitcher.firstName} ${homeTeam.probablePitcher.lastName}`,
-                    stats: null // Stats will be loaded separately when needed
-                };
-            }
-        }
-        
+
         // Process linescore data
         const innings = game.linescore?.innings || [];
         const leadChanges = this.countLeadChanges(innings, awayTeam.team.id, homeTeam.team.id);
         const isExtraInnings = innings.length > 9;
         const totalRuns = awayTeam.score + homeTeam.score;
         const runDifference = Math.abs(awayTeam.score - homeTeam.score);
-        
-        // Extract hits and errors from linescore
+
+        // Extract hits and errors
         const awayHits = game.linescore?.teams?.away?.hits || 0;
         const awayErrors = game.linescore?.teams?.away?.errors || 0;
         const homeHits = game.linescore?.teams?.home?.hits || 0;
         const homeErrors = game.linescore?.teams?.home?.errors || 0;
-        
-        // Get media/watch links if available
-        let watchLinks = [];
-        if (game.content && game.content.media && game.content.media.epg) {
-            game.content.media.epg.forEach(mediaType => {
-                if (mediaType.title === 'MLBTV' && mediaType.items) {
-                    watchLinks = mediaType.items.map(item => ({
-                        title: item.mediaFeedType || 'Watch',
-                        url: item.contentUrl || '#'
-                    }));
-                }
-            });
-        }
-        
+
+        // Process inning-by-inning scoring
+        const inningScores = innings.map(inning => ({
+            inningNumber: inning.num,
+            away: inning.away?.runs || 0,
+            home: inning.home?.runs || 0
+        }));
+
         return {
             id: game.gamePk,
             date: game.gameDate,
@@ -124,81 +68,172 @@ const Parser = {
             awayTeam: {
                 id: awayTeam.team.id,
                 name: awayTeam.team.name,
-                logoUrl: API.getTeamLogoUrl(awayTeam.team.id),
                 score: awayTeam.score,
                 hits: awayHits,
                 errors: awayErrors,
-                pitcher: awayPitcher,
-                lineup: [] // Will be populated later
+                pitcher: this.extractPitcher(awayTeam.probablePitcher),
+                lineup: [],
+                logoUrl: API.getTeamLogoUrl(awayTeam.team.id)
             },
             homeTeam: {
                 id: homeTeam.team.id,
                 name: homeTeam.team.name,
-                logoUrl: API.getTeamLogoUrl(homeTeam.team.id),
                 score: homeTeam.score,
                 hits: homeHits,
                 errors: homeErrors,
-                pitcher: homePitcher,
-                lineup: [] // Will be populated later
+                pitcher: this.extractPitcher(homeTeam.probablePitcher),
+                lineup: [],
+                logoUrl: API.getTeamLogoUrl(homeTeam.team.id)
             },
             venue: game.venue?.name || 'Unknown Venue',
             innings: innings.length,
+            inningScores,
             isExtraInnings,
             leadChanges,
             totalRuns,
             runDifference,
             isCloseGame: runDifference <= 2,
             isHighScoring: totalRuns >= 10,
-            watchLinks,
-            lineupsLoaded: false // Flag to track if lineups have been loaded
+            lineupsLoaded: false
         };
-    },
-    
+    }
+
     /**
-     * Count the number of lead changes in a game
+     * Extract pitcher information
+     * @param {Object} pitcher - Raw pitcher data
+     * @returns {Object|null} - Processed pitcher object
+     */
+    static extractPitcher(pitcher) {
+        if (!pitcher) return null;
+        
+        return {
+            id: pitcher.id,
+            name: Utils.getPlayerName(pitcher),
+            stats: null // Stats will be loaded separately when needed
+        };
+    }
+
+    /**
+     * Count lead changes in a game
      * @param {Array} innings - Innings data
      * @param {number} awayTeamId - Away team ID
      * @param {number} homeTeamId - Home team ID
      * @returns {number} - Number of lead changes
      */
-    countLeadChanges(innings, awayTeamId, homeTeamId) {
-        if (!innings || innings.length === 0) {
-            return 0;
-        }
+    static countLeadChanges(innings, awayTeamId, homeTeamId) {
+        if (!innings?.length) return 0;
         
         let leadChanges = 0;
         let awayScore = 0;
         let homeScore = 0;
-        let leadingTeam = null;
+        let currentLeader = null;
         
-        innings.forEach(inning => {
+        for (const inning of innings) {
             // Add away team runs for this inning
-            if (inning.away && typeof inning.away.runs === 'number') {
+            if (inning.away?.runs != null) {
                 awayScore += inning.away.runs;
-            }
-            
-            // Check for lead change after away team bats
-            if (leadingTeam === homeTeamId && awayScore > homeScore) {
-                leadChanges++;
-                leadingTeam = awayTeamId;
-            } else if (leadingTeam === null && awayScore > 0) {
-                leadingTeam = awayTeamId;
+                
+                // Check if away team took the lead
+                if (awayScore > homeScore) {
+                    if (currentLeader !== awayTeamId && currentLeader !== null) {
+                        leadChanges++;
+                    }
+                    currentLeader = awayTeamId;
+                }
             }
             
             // Add home team runs for this inning
-            if (inning.home && typeof inning.home.runs === 'number') {
+            if (inning.home?.runs != null) {
                 homeScore += inning.home.runs;
+                
+                // Check if home team took the lead
+                if (homeScore > awayScore) {
+                    if (currentLeader !== homeTeamId && currentLeader !== null) {
+                        leadChanges++;
+                    }
+                    currentLeader = homeTeamId;
+                } else if (homeScore === awayScore) {
+                    // If game is tied, no one has the lead
+                    currentLeader = null;
+                }
             }
-            
-            // Check for lead change after home team bats
-            if (leadingTeam === awayTeamId && homeScore > awayScore) {
-                leadChanges++;
-                leadingTeam = homeTeamId;
-            } else if (leadingTeam === null && homeScore > 0) {
-                leadingTeam = homeTeamId;
-            }
-        });
+        }
         
         return leadChanges;
     }
-};
+
+    /**
+     * Process future games data
+     * @param {Object} apiData - Raw API response
+     * @returns {Array} - Array of processed future game objects
+     */
+    static processFutureGames(apiData) {
+        if (!apiData.dates?.length) return [];
+        
+        const games = [];
+        
+        apiData.dates.forEach(date => {
+            if (!date.games?.length) return;
+            
+            date.games.forEach(game => {
+                if (['Preview', 'Scheduled'].includes(game.status.abstractGameState)) {
+                    try {
+                        games.push(this.processFutureGame(game));
+                    } catch (error) {
+                        console.error(`Error processing future game ${game.gamePk}:`, error);
+                    }
+                }
+            });
+        });
+        
+        return games;
+    }
+
+    /**
+     * Process individual future game data
+     * @param {Object} game - Raw game data
+     * @returns {Object} - Processed future game object
+     */
+    static processFutureGame(game) {
+        const awayTeam = game.teams.away;
+        const homeTeam = game.teams.home;
+        
+        return {
+            id: game.gamePk,
+            date: game.gameDate,
+            status: game.status.detailedState,
+            gameTime: new Date(game.gameDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            isFuture: true,
+            awayTeam: {
+                id: awayTeam.team.id,
+                name: awayTeam.team.name,
+                logoUrl: API.getTeamLogoUrl(awayTeam.team.id),
+                pitcher: this.extractFuturePitcher(awayTeam.probablePitcher),
+                lineup: []
+            },
+            homeTeam: {
+                id: homeTeam.team.id,
+                name: homeTeam.team.name,
+                logoUrl: API.getTeamLogoUrl(homeTeam.team.id),
+                pitcher: this.extractFuturePitcher(homeTeam.probablePitcher),
+                lineup: []
+            },
+            venue: game.venue?.name || 'Unknown Venue'
+        };
+    }
+
+    /**
+     * Extract pitcher information for future games
+     * @param {Object} pitcher - Raw pitcher data
+     * @returns {Object|null} - Processed pitcher object
+     */
+    static extractFuturePitcher(pitcher) {
+        if (!pitcher) return null;
+        
+        return {
+            id: pitcher.id,
+            name: pitcher.fullName || `${pitcher.firstName} ${pitcher.lastName}` || 'TBD',
+            stats: null
+        };
+    }
+}
