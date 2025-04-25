@@ -1,8 +1,8 @@
 /**
- * Parser module for processing MLB game data
+ * Parse raw game data into a standardized format
  */
-import Utils from './utils.js';
 import { API } from './api.js';
+import Utils from './utils.js';
 
 export class Parser {
     /**
@@ -61,6 +61,10 @@ export class Parser {
             home: inning.home?.runs || 0
         }));
 
+        // Add late game drama properties
+        const lastLeadChangeInning = this.findLastLeadChangeInning(game);
+        const isWalkoff = this.isWalkoffGame(game);
+        
         return {
             id: game.gamePk,
             date: game.gameDate,
@@ -94,7 +98,10 @@ export class Parser {
             runDifference,
             isCloseGame: runDifference <= 2,
             isHighScoring: totalRuns >= 10,
-            lineupsLoaded: false
+            lineupsLoaded: false,
+            lastLeadChangeInning,
+            isWalkoff,
+            inning: game.inning || 9
         };
     }
 
@@ -235,5 +242,70 @@ export class Parser {
             name: pitcher.fullName || `${pitcher.firstName} ${pitcher.lastName}` || 'TBD',
             stats: null
         };
+    }
+
+    /**
+     * Find the inning of the last lead change
+     * @param {Object} gameData - Raw game data
+     * @returns {number} - Inning number of last lead change
+     */
+    static findLastLeadChangeInning(gameData) {
+        if (!gameData.linescore?.innings) return 0;
+        
+        let lastLeadChangeInning = 0;
+        let awayScore = 0;
+        let homeScore = 0;
+        let previousLeader = null;
+        
+        gameData.linescore.innings.forEach(inning => {
+            // Update scores
+            awayScore += inning.away?.runs || 0;
+            homeScore += inning.home?.runs || 0;
+            
+            // Determine current leader
+            const currentLeader = awayScore > homeScore ? 'away' :
+                                homeScore > awayScore ? 'home' : 'tie';
+            
+            // Check for lead change
+            if (currentLeader !== previousLeader && currentLeader !== 'tie') {
+                lastLeadChangeInning = inning.num;
+            }
+            
+            previousLeader = currentLeader;
+        });
+        
+        return lastLeadChangeInning;
+    }
+
+    /**
+     * Determine if the game ended in a walk-off
+     * @param {Object} gameData - Raw game data
+     * @returns {boolean} - True if game ended in walk-off
+     */
+    static isWalkoffGame(gameData) {
+        // Game is a walkoff if:
+        // 1. Home team won
+        // 2. Game ended in 9th or later
+        // 3. Home team was tied or behind entering their last at-bat
+        const innings = gameData.linescore?.innings || [];
+        if (innings.length === 0) return false;
+
+        const lastInning = innings[innings.length - 1];
+        const awayScore = gameData.teams.away.score;
+        const homeScore = gameData.teams.home.score;
+        
+        // Check if home team won
+        if (homeScore <= awayScore) return false;
+        
+        // Check if game ended in 9th or later
+        if (lastInning.num < 9) return false;
+        
+        // Calculate score before final half-inning
+        const awayFinalScore = awayScore;
+        const homeFinalScore = homeScore;
+        const homeScoreBeforeLast = homeFinalScore - (lastInning.home?.runs || 0);
+        
+        // It's a walkoff if home team was tied or behind before their last at-bat
+        return homeScoreBeforeLast <= awayFinalScore;
     }
 }

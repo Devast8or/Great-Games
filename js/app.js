@@ -2,7 +2,7 @@
  * Main application entry point
  */
 import UI from './ui.js';
-import { API } from './api.js';
+import { API, APIError } from './api.js';
 import { Parser } from './parser.js';
 import { Ranker } from './ranker.js';
 
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize API error handling
     window.addEventListener('unhandledrejection', event => {
-        if (event.reason instanceof API.APIError) {
+        if (event.reason && typeof event.reason === 'object' && event.reason.name === 'APIError') {
             UI.showError(`API Error: ${event.reason.message}`);
         }
     });

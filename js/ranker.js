@@ -6,13 +6,14 @@ export class Ranker {
      * Define scoring weights for different factors
      */
     static weights = {
-        closeGame: 30,      // Primary factor
-        leadChanges: 20,    // Secondary factor
-        extraInnings: 10,   // Extra innings
-        highScoring: 10,    // High scoring
-        teamRankings: 10,   // Team rankings
-        hits: 10,           // Total hits
-        errors: 10          // Errors (defensive drama)
+        closeGame: 25,      // Reduced from 30
+        leadChanges: 20,    // Maintained
+        lateGameDrama: 15,  // New factor
+        extraInnings: 10,   // Maintained
+        highScoring: 10,    // Maintained
+        teamRankings: 10,   // Maintained
+        hits: 5,           // Reduced from 10
+        errors: 5          // Reduced from 10
     };
 
     /**
@@ -49,6 +50,11 @@ export class Ranker {
         
         if (options.leadChanges) {
             score += this.calculateLeadChangesScore(game) * this.weights.leadChanges;
+        }
+
+        // Add late game drama scoring
+        if (options.lateGameDrama) {
+            score += this.calculateLateGameDramaScore(game) * this.weights.lateGameDrama;
         }
         
         if (options.extraInnings && game.isExtraInnings) {
@@ -93,13 +99,47 @@ export class Ranker {
      * @returns {number} - Score multiplier (0-1)
      */
     static calculateLeadChangesScore(game) {
-        // More conservative scoring for lead changes
-        if (game.leadChanges >= 5) return 1;
-        if (game.leadChanges === 4) return 0.8;    // Reduced from 0.9
-        if (game.leadChanges === 3) return 0.6;    // Reduced from 0.7
-        if (game.leadChanges === 2) return 0.4;    // Reduced from 0.5
-        if (game.leadChanges === 1) return 0.2;    // Reduced from 0.3
-        return 0;
+        let score = 0;
+        
+        // Base scoring for number of lead changes
+        if (game.leadChanges >= 5) score = 1;
+        else if (game.leadChanges === 4) score = 0.8;
+        else if (game.leadChanges === 3) score = 0.6;
+        else if (game.leadChanges === 2) score = 0.4;
+        else if (game.leadChanges === 1) score = 0.2;
+        
+        // Bonus for lead changes in later innings
+        if (game.lastLeadChangeInning >= 7) {
+            score *= 1.2; // 20% bonus for late-game changes
+        }
+        
+        return Math.min(1, score);
+    }
+
+    /**
+     * Calculate score component for late game drama
+     * @param {Object} game - Game object
+     * @returns {number} - Score multiplier (0-1)
+     */
+    static calculateLateGameDramaScore(game) {
+        let score = 0;
+        
+        // Close game in final innings (7th or later)
+        if (game.runDifference <= 2 && game.inning >= 7) {
+            score += 0.5;
+        }
+        
+        // Lead changes in late innings
+        if (game.lastLeadChangeInning >= 7) {
+            score += 0.3;
+        }
+        
+        // Walk-off victory
+        if (game.isWalkoff) {
+            score += 0.5;
+        }
+        
+        return Math.min(1, score);
     }
 
     /**
@@ -124,13 +164,22 @@ export class Ranker {
      * @returns {number} - Score multiplier (0-1)
      */
     static calculateHighScoringScore(game) {
-        // More conservative scoring for total runs
-        if (game.totalRuns >= 15) return 1;
-        if (game.totalRuns >= 12) return 0.7;    // Reduced from 0.8
-        if (game.totalRuns >= 10) return 0.5;    // Reduced from 0.6
-        if (game.totalRuns >= 8) return 0.3;     // Reduced from 0.4
-        if (game.totalRuns >= 6) return 0.1;     // Reduced from 0.2
-        return 0;
+        let score = 0;
+        
+        // Base score from total runs
+        if (game.totalRuns >= 15) score = 1;
+        else if (game.totalRuns >= 12) score = 0.7;
+        else if (game.totalRuns >= 10) score = 0.5;
+        else if (game.totalRuns >= 8) score = 0.3;
+        else if (game.totalRuns >= 6) score = 0.1;
+        
+        // Bonus for balanced high-scoring games
+        const runDiff = Math.abs(game.homeTeam.runs - game.awayTeam.runs);
+        if (game.totalRuns >= 10 && runDiff <= 2) {
+            score *= 1.2; // 20% bonus for close high-scoring games
+        }
+        
+        return Math.min(1, score);
     }
 
     /**

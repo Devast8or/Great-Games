@@ -29,13 +29,17 @@ body {
     padding: 0 20px;
 }
 
-/* Header Styles */
-header {
+/* Header and Footer Styles */
+header, footer {
     background-color: var(--primary-color);
     color: white;
     padding: 1.5rem 0;
     text-align: center;
     box-shadow: var(--shadow);
+}
+
+footer .container {
+    text-align: center;
 }
 
 /* Controls Section */

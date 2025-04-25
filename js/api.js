@@ -28,19 +28,25 @@ export const API = {
         const url = `${this.BASE_URL}${endpoint}${queryString ? '?' + queryString : ''}`;
         
         try {
+            console.log('Fetching URL:', url); // Debug log
             const cacheKey = Utils.createCacheKey(endpoint, params);
             return await this.cache.getOrFetch(cacheKey, async () => {
+                console.log('Cache miss, fetching from API...'); // Debug log
                 const response = await fetch(url);
                 if (!response.ok) {
+                    console.error('API Error:', response.status, response.statusText); // Debug log
                     throw new APIError(
                         `API request failed: ${response.statusText}`,
                         response.status,
                         endpoint
                     );
                 }
-                return await response.json();
+                const data = await response.json();
+                console.log('API Response:', data); // Debug log
+                return data;
             });
         } catch (error) {
+            console.error('API Request Error:', error); // Debug log
             if (error instanceof APIError) throw error;
             throw new APIError('Network error', 0, endpoint);
         }

@@ -18,6 +18,7 @@ class UI {
             filters: {
                 closeGames: document.getElementById('close-games'),
                 leadChanges: document.getElementById('lead-changes'),
+                lateGameDrama: document.getElementById('late-game-drama'),
                 extraInnings: document.getElementById('extra-innings'),
                 highScoring: document.getElementById('high-scoring'),
                 teamRankings: document.getElementById('team-rankings'),
@@ -61,6 +62,7 @@ class UI {
      */
     async handleLoadGames() {
         const date = this.elements.gameDate.value;
+        console.log('Loading games for date:', date); // Debug log
         
         if (!date) {
             this.showError('Please select a date');
@@ -74,9 +76,14 @@ class UI {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
+            console.log('Selected date:', selectedDate);
+            console.log('Today:', today);
+            
             if (selectedDate > today) {
+                console.log('Loading future games');
                 await this.loadFutureGames(date);
             } else {
+                console.log('Loading completed games');
                 await this.loadCompletedGames(date);
             }
         } catch (error) {
@@ -89,13 +96,19 @@ class UI {
      * Load completed games for a date
      */
     async loadCompletedGames(date) {
+        console.log('Fetching completed games and standings...');
         const [gamesData, standingsData] = await Promise.all([
             API.fetchGames(date),
             API.fetchStandings(date)
         ]);
 
+        console.log('Games data:', gamesData);
+        console.log('Standings data:', standingsData);
+
         const teamRankings = API.processTeamRankings(standingsData);
         const games = Parser.processGames(gamesData);
+
+        console.log('Processed games:', games);
 
         // Add rankings to games
         games.forEach(game => {

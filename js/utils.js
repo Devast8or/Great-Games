@@ -70,6 +70,21 @@ const Utils = {
      */
     createCacheKey(endpoint, params) {
         return `mlb_${endpoint}_${JSON.stringify(params)}`;
+    },
+
+    /**
+     * Format inning number with proper suffix (1st, 2nd, 3rd, etc)
+     * @param {number} inning - Inning number
+     * @returns {string} - Formatted inning string
+     */
+    getInningString(inning) {
+        const suffixes = {
+            1: 'st',
+            2: 'nd',
+            3: 'rd'
+        };
+        const suffix = (inning >= 11 && inning <= 13) ? 'th' : suffixes[inning % 10] || 'th';
+        return `${inning}${suffix}`;
     }
 };
 
