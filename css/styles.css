@@ -678,3 +678,22 @@ footer .container {
 .panel-transitioning .panel-content {
     transition: opacity 0.15s ease-in-out;
 }
+
+/* Team logo in player detail panel */
+.player-team-logo {
+    text-align: center;
+    margin-top: 2rem;
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.team-logo-detail {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+}
+
+.team-logo-detail:hover {
+    transform: scale(1.1);
+}

@@ -166,6 +166,11 @@ class PlayerDetailPanel {
                         <div class="stat-value">${player.stats.ops}</div>
                     </div>
                 </div>
+                <div class="player-team-logo">
+                    <img src="https://www.mlbstatic.com/team-logos/${player.teamId}.svg" 
+                         alt="Team Logo" 
+                         class="team-logo-detail">
+                </div>
             </div>
         `;
     }

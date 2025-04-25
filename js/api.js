@@ -136,14 +136,16 @@ export const API = {
         const lineups = { away: [], home: [] };
         
         ['away', 'home'].forEach(teamType => {
+            const team = boxscore.teams[teamType];
             boxscore.teams?.[teamType]?.battingOrder?.forEach(playerId => {
-                const player = boxscore.teams[teamType].players[`ID${playerId}`];
+                const player = team.players[`ID${playerId}`];
                 
                 if (player) {
                     lineups[teamType].push({
                         id: playerId,
                         name: Utils.getPlayerName(player),
                         position: player.position?.abbreviation || 'N/A',
+                        teamId: team.team.id,
                         stats: Utils.processPlayerStats(
                             player.seasonStats?.batting || player.stats?.batting,
                             'batting'
