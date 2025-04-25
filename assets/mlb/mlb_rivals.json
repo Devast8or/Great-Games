@@ -1,0 +1,66 @@
+[
+    {
+        "type": "recent",
+        "rivalries": [
+            {
+                "teams": ["Dodgers", "Padres"],
+                "nickname": "SoCal Rivalry"
+            },
+            {
+                "teams": ["Brewers", "Cubs"],
+                "nickname": "I-94 Rivalry"
+            },
+            {
+                "teams": ["Braves", "Mets"],
+                "nickname": "NL East Rivalry"
+            },
+            {
+                "teams": ["Phillies", "Braves"],
+                "nickname": "NL East Clash"
+            },
+            {
+                "teams": ["Guardians", "Tigers"],
+                "nickname": "AL Central Showdown"
+            },
+            {
+                "teams": ["Orioles", "Yankees"],
+                "nickname": "AL East Battle"
+            }
+        ]
+    },
+    {
+        "type": "iconic",
+        "rivalries": [
+            {
+                "teams": ["Yankees", "Red Sox"],
+                "nickname": "Battle of the Bronx",
+                "description": "Arguably the most famous rivalry in all sports, the Red Sox and Yankees' feud is a cornerstone of baseball history. This animosity traces back to 1919, when the Red Sox sold Babe Ruth to the Yankees, igniting the infamous 'Curse of the Bambino.' For 86 years, Red Sox fans endured heartbreak until the team finally broke the curse in 2004, sweeping the Yankees in a historic ALCS comeback en route to a World Series title. The teams' geographic proximity, competing legacies, and passionate fanbases fuel the rivalry."
+            },
+            {
+                "teams": ["Cubs", "Cardinals"],
+                "nickname": "Battle of the Birds",
+                "description": "A rivalry that defines the Midwest. With a history dating back to the late 19th century, this National League Central clash is as much about the fans as the teams. Cubs fans from Chicago and Cardinals supporters from St. Louis are fiercely loyal, making their encounters some of the season's most anticipated games. The rivalry is steeped in mutual respect but also intense competitiveness, especially when postseason implications are on the line."
+            },
+            {
+                "teams": ["Dodgers", "Giants"],
+                "nickname": "Freeway Series",
+                "description": "A West Coast rivalry that traces its origins to New York, where both teams were based before relocating in the late 1950s. What started in the Big Apple as a fierce competition between Brooklyn (Dodgers) and Manhattan (Giants) transitioned to California and lost none of its heat. High-stakes games, thrilling finishes, and intense battles for NL West supremacy have marked the rivalry's modern era."
+            },
+            {
+                "teams": ["Mets", "Yankees"],
+                "nickname": "Subway Series",
+                "description": "The rivalry between New York's two MLB teams pits tradition against resilience. With their unparalleled history of 27 World Series titles, the Yankees represent baseball's elite. Meanwhile, the Mets, seen as the underdog, hold their own thanks to their loyal fans and memorable successes. The rivalry gained significant attention during the 2000 World Series, where the Yankees emerged victorious in a dramatic five-game series."
+            },
+            {
+                "teams": ["Astros", "Rangers"],
+                "nickname": "Lone Star Series",
+                "description": "This might be newer than other rivalries, but it has quickly become one of the fiercest in the league. The rivalry intensified in 2013 when the Astros moved to the American League, placing the two Texas teams in direct competition within the AL West. Proximity and state pride fuel the animosity, as do recent on-field successes, particularly the Astros' dominance and controversial World Series win in 2017."
+            },
+            {
+                "teams": ["White Sox", "Cubs"],
+                "nickname": "Crosstown Classic",
+                "description": "A unique rivalry that divides the Windy City into North and South. The Cubs, based in Wrigley Field on the North Side, are often seen as the more popular team, while the White Sox, playing at Guaranteed Rate Field on the South Side, carry the underdog persona. The rivalry gained momentum when interleague play began in 1997, giving fans an annual opportunity to cheer for their city's dominance."
+            }
+        ]
+    }
+]

@@ -29,13 +29,17 @@ body {
     padding: 0 20px;
 }
 
-/* Header Styles */
-header {
+/* Header and Footer Styles */
+header, footer {
     background-color: var(--primary-color);
     color: white;
     padding: 1.5rem 0;
     text-align: center;
     box-shadow: var(--shadow);
+}
+
+footer .container {
+    text-align: center;
 }
 
 /* Controls Section */
@@ -75,22 +79,130 @@ header {
     background-color: #001c48;
 }
 
+/* Modern filter styles */
 .filters h3 {
-    margin-bottom: 1rem;
+    margin-bottom: 1.2rem;
+    color: var(--primary-color);
+    font-size: 1.4rem;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 0.5rem;
 }
 
-.filter-options {
+.filter-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 1.5rem;
+    gap: 2rem;
+    margin-top: 1rem;
 }
 
-.filter-options label {
+.filter-category {
+    flex: 1;
+    min-width: 280px;
+    background-color: #f8f8f8;
+    border-radius: 8px;
+    padding: 1.2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-category:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+}
+
+.filter-category h4 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.filter-category .filter-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Toggle switch styles */
+.filter-toggle-wrapper {
+    position: relative;
+}
+
+.toggle-input {
+    opacity: 0;
+    position: absolute;
+    width: 0;
+    height: 0;
+}
+
+.toggle-label {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
     cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
 }
+
+.toggle-label:hover {
+    background-color: rgba(0,0,0,0.03);
+}
+
+.toggle-slider {
+    display: inline-block;
+    position: relative;
+    width: 50px;
+    height: 24px;
+    background-color: #ccc;
+    border-radius: 24px;
+    margin-right: 12px;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease;
+}
+
+.toggle-slider:before {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: white;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.toggle-input:checked + .toggle-label .toggle-slider {
+    background-color: var(--primary-color);
+}
+
+.toggle-input:checked + .toggle-label .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+.toggle-input:focus + .toggle-label .toggle-slider {
+    box-shadow: 0 0 0 2px rgba(0, 45, 114, 0.2);
+}
+
+.toggle-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.toggle-name {
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.toggle-description {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.2rem;
+}
+
+
+
 
 /* Games Container */
 .games-container {
@@ -153,11 +265,16 @@ header {
 .vs {
     font-weight: bold;
     font-size: 1.2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 0 0 20%;
+    text-align: center;
 }
 
 .team-logo {
-    width: 50px;
-    height: 50px;
+    width: 90px;
+    height: 90px;
     object-fit: contain;
     background-color: white;
     border-radius: 50%;
@@ -167,6 +284,7 @@ header {
 .team-name {
     font-weight: bold;
     text-align: center;
+    font-size: 1.2rem;
 }
 
 .pitcher {
@@ -197,6 +315,10 @@ header {
     margin-right: 0.5rem;
 }
 
+.rating-label {
+    color: #000;
+}
+
 .reveal-btn {
     flex: 1;
     background-color: var(--secondary-color);
@@ -219,69 +341,138 @@ header {
     margin-bottom: 1rem;
 }
 
-.watch-links {
-    margin-top: 1rem;
+/* Box score table styles */
+.score {
+    max-width: 800px;
+    margin: 1.5rem auto;
+    padding: 0.5rem;
+    background: #1a1a1a;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
-.watch-links a {
-    display: inline-block;
-    color: var(--primary-color);
-    text-decoration: none;
-    margin: 0 0.5rem;
-}
-
-.watch-links a:hover {
-    text-decoration: underline;
-}
-
-/* Button container and pitcher images */
-.button-container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-/* VS Score Container */
-.vs-score-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-.top-reveal-btn {
-    background-color: var(--secondary-color);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: var(--transition);
-    margin: 0.5rem 0;
-}
-
-.top-reveal-btn:hover {
-    background-color: #bc2a2e;
-}
-
-.top-score {
-    font-size: 1.2rem;
+.box-score-table {
+    width: 100%;
+    margin: 0 auto;
+    border-collapse: separate;
+    border-spacing: 2px;
+    font-family: 'Courier New', monospace;
     font-weight: bold;
-    background-color: #f1f1f1;
+    background-color: #1a1a1a;
     border-radius: 4px;
-    padding: 0.3rem 0.6rem;
+    overflow-x: auto;
+    padding: 0;
+    display: table;  /* Change from block to table */
+    white-space: nowrap;
 }
 
-/* Pitcher containers and images */
+/* Adjust spacing for score elements */
+.box-score-table th, 
+.box-score-table td {
+    padding: 0.4rem 0.5rem;
+    text-align: center;
+    background-color: #2d2d2d;
+    color: #fff;
+    min-width: 30px;
+    border: none;
+}
+
+.box-score-table th {
+    background-color: #333;
+    color: #ffd700;
+    font-weight: bold;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+}
+
+.box-score-table th:first-child {
+    width: auto;
+    text-align: center;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    border-radius: 4px 0 0 0;
+}
+
+/* Team logo cell styles */
+.team-logo-cell {
+    text-align: center;
+    padding: 0.4rem !important;
+    position: sticky;
+    left: 0;
+    background-color: #333 !important;
+    z-index: 1;
+    width: 40px;
+}
+
+/* Team logo in box score */
+.score-team-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #fff;
+    object-fit: contain;
+    vertical-align: middle;
+    padding: 2px;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.box-score-table td.runs-cell {
+    font-weight: bold;
+    color: #ffd700;
+    font-size: 1.1rem;
+}
+
+/* Winning team highlighting */
+.box-score-table tr.winner td {
+    background-color: #3d3d3d;
+}
+
+/* Innings info for extra innings games */
+.innings-info {
+    font-size: 0.8rem;
+    color: #ffd700;
+    margin-top: 0.5rem;
+    text-align: center;
+    font-style: italic;
+}
+
+/* Score container */
+.score.hidden {
+    display: none;
+}
+
+/* Alternating column colors for better readability */
+.box-score-table td:nth-child(even):not(.team-logo-cell) {
+    background-color: #363636;
+}
+
+.box-score-table th:nth-child(even) {
+    background-color: #3a3a3a;
+}
+
+/* Final columns (R H E) styling */
+.box-score-table th:nth-last-child(-n+3),
+.box-score-table td:nth-last-child(-n+3) {
+    background-color: #404040;
+    border-left: 2px solid #1a1a1a;
+}
+
+.box-score-table td:nth-last-child(-n+3) {
+    color: #ffd700;
+    font-weight: bold;
+}
+
+/* Restore Pitcher Styles */
 .pitchers-container {
     display: flex;
     justify-content: space-around;
     margin: 1.5rem 0;
     gap: 2rem;
+    background-color: var(--card-bg-color);
 }
 
 .pitcher-container {
@@ -289,11 +480,12 @@ header {
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
+    background-color: var(--card-bg-color);
 }
 
 .pitcher-img {
-    width: 180px;  /* Increased from 150px */
-    height: 180px; /* Increased from 150px */
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
     overflow: hidden;
     background-color: #f0f0f0;
@@ -306,8 +498,9 @@ header {
     object-fit: cover;
 }
 
-.pitcher-img.hidden, .pitcher-container.hidden {
-    display: none;
+.pitcher-name {
+    font-weight: bold;
+    color: var(--text-color);
 }
 
 .pitcher-stats {
@@ -315,75 +508,17 @@ header {
     color: #666;
     text-align: center;
     max-width: 180px;
-    margin-top: 0.2rem;
-}
-
-/* Footer */
-footer {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 1.5rem 0;
-    text-align: center;
-    margin-top: 2rem;
 }
 
 /* Lineup Styles */
-.lineup-btn {
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-left: 0.5rem;
-    transition: var(--transition);
-}
-
-.lineup-btn:hover {
-    background-color: #001c48;
-}
-
-.lineups-container {
-    padding: 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    gap: 1.5rem;
-    border-top: 1px solid var(--border-color);
-    transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
-}
-
-.lineups-container.hidden {
-    display: none;
-}
-
-.lineup {
-    flex: 1;
-    min-width: 0; /* Allow lineup to shrink below min-content width */
-}
-
-.lineup h4 {
-    color: var(--primary-color);
-    margin-bottom: 0.8rem;
-    border-bottom: 2px solid var(--secondary-color);
-    padding-bottom: 0.3rem;
-    white-space: nowrap;
-}
-
-.lineup-loading, .error, .no-lineup {
-    padding: 1rem 0;
-    color: #666;
-    font-style: italic;
-}
-
-.error {
-    color: var(--secondary-color);
-}
-
 .lineup-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.85rem;
-    table-layout: fixed; /* Force fixed table layout */
+    table-layout: fixed;
+    background-color: var(--card-bg-color);
+    margin: 0;
+    border: none;
 }
 
 .lineup-table th {
@@ -392,21 +527,15 @@ footer {
     text-align: left;
     font-weight: bold;
     color: var(--primary-color);
+    border: none;
+    position: relative;
 }
 
 .lineup-table td {
     padding: 0.5rem;
     border-bottom: 1px solid var(--border-color);
-}
-
-.lineup-table th,
-.lineup-table td {
-    height: 2.5rem; /* Set fixed height for all cells */
-    padding: 0.5rem;
-    vertical-align: middle; /* Center content vertically */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap; /* Prevent text wrapping */
+    color: var(--text-color);
+    background-color: var(--card-bg-color);
 }
 
 .lineup-table tr:last-child td {
@@ -422,7 +551,62 @@ footer {
 .lineup-table td:nth-child(1) {
     width: 10%;
     text-align: center;
-    vertical-align: middle;
+}
+
+.lineup-table th:nth-child(2),
+.lineup-table td:nth-child(2) {
+    width: 10%;
+}
+
+.lineup-table th:nth-child(3),
+.lineup-table td:nth-child(3) {
+    width: 25%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lineup-table th:nth-child(n+4),
+.lineup-table td:nth-child(n+4) {
+    width: 9%;
+    text-align: center;
+}
+
+/* Lineups container styles */
+.lineups-container {
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--card-bg-color);
+    max-height: 2000px;
+    opacity: 1;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out,
+                opacity 0.3s ease-in-out;
+}
+
+.lineups-container.hidden {
+    max-height: 0;
+    opacity: 0;
+    padding: 0;
+    border-top: none;
+}
+
+.lineup {
+    flex: 1;
+    min-width: 0;
+    background-color: var(--card-bg-color);
+}
+
+.lineup h4 {
+    color: var(--primary-color);
+    margin-bottom: 0.8rem;
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 0.3rem;
+    white-space: nowrap;
+    font-size: 1rem;
 }
 
 /* Player image styles */
@@ -441,36 +625,20 @@ footer {
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.lineup-table th:nth-child(2),
-.lineup-table td:nth-child(2) {
-    width: 10%;
-}
-
-.lineup-table th:nth-child(3),
-.lineup-table td:nth-child(3) {
-    width: 25%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.lineup-table th:nth-child(4),
-.lineup-table td:nth-child(4),
-.lineup-table th:nth-child(5),
-lineup-table td:nth-child(5),
-lineup-table th:nth-child(6),
-lineup-table td:nth-child(6),
-lineup-table th:nth-child(7),
-lineup-table td:nth-child(7),
-lineup-table th:nth-child(8),
-lineup-table td:nth-child(8),
-lineup-table th:nth-child(9),
-lineup-table td:nth-child(9) {
-    width: 9%;
+.lineup-loading, 
+.error, 
+.no-lineup {
+    padding: 1rem 0;
+    color: #666;
+    font-style: italic;
     text-align: center;
 }
 
-/* Arrow Button and Lineups Container Styles */
+.error {
+    color: var(--secondary-color);
+}
+
+/* Expand button styles */
 .expand-btn {
     display: block;
     width: 100%;
@@ -484,6 +652,7 @@ lineup-table td:nth-child(9) {
     transition: var(--transition);
     text-align: center;
     font-weight: bold;
+    font-size: 0.5 rem;
 }
 
 .expand-btn:hover {
@@ -498,13 +667,280 @@ lineup-table td:nth-child(9) {
     transition: transform 0.3s ease;
 }
 
-/* Responsive handling for lineups */
-@media (max-width: 768px) {
-    .lineups-container {
-        flex-direction: column;
-    }
-    
-    .lineup {
-        width: 100%;
-    }
+.game-time {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    text-align: center;
+    padding: 1rem;
+    background-color: var(--card-bg-color);
+    border-radius: 4px;
+    margin: 1rem 0;
+}
+
+/* Player Detail Panel */
+.player-detail-panel {
+    position: fixed;
+    top: 0;
+    height: 100vh;
+    width: 350px;
+    background-color: var(--card-bg-color);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    z-index: 1000;
+    transition: transform 0.3s ease-in-out;
+    overflow-y: auto;
+}
+
+.panel-away {
+    left: 0;
+    transform: translateX(-100%);
+    border-right: 4px solid var(--primary-color);
+}
+
+.panel-home {
+    right: 0;
+    transform: translateX(100%);
+    border-left: 4px solid var(--primary-color);
+}
+
+.panel-active {
+    transform: translateX(0);
+}
+
+.player-detail-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+.player-detail-close:hover {
+    color: var(--secondary-color);
+}
+
+.player-detail-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.player-detail-img {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    display: block;
+    object-fit: cover;
+    background-color: #f0f0f0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.player-detail-name {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: var(--primary-color);
+}
+
+.player-detail-position {
+    font-size: 1.1rem;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.player-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.stat-item {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* Player Detail Panel Transitions */
+.panel-content {
+    opacity: 1;
+    transition: opacity 0.15s ease-in-out;
+}
+
+.panel-transitioning .panel-content {
+    transition: opacity 0.15s ease-in-out;
+}
+
+/* Team logo in player detail panel */
+.player-team-logo {
+    text-align: center;
+    margin-top: 2rem;
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.team-logo-detail {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+}
+
+.team-logo-detail:hover {
+    transform: scale(1.1);
+}
+
+/* Team lineup column layout */
+.team-lineup-column {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Pitcher display in lineups */
+.pitcher-display {
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.pitcher-header {
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-bottom: 0.8rem;
+    font-size: 1rem;
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 0.3rem;
+}
+
+.pitcher-loading, .no-pitcher-data {
+    padding: 1rem;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+/* Keep lineups row side by side */
+.lineups-row {
+    display: flex;
+    gap: 2rem;
+    justify-content: space-between;
+}
+
+/* Adjustments for pitcher containers in lineup view */
+.pitcher-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.pitcher-img {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 0.8rem;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+}
+
+.pitcher-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.pitcher-name {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+}
+
+.pitcher-stats {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* Collapsible filters styles */
+.filters {
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-filters-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.toggle-filters-btn:hover {
+    background-color: #001c48;
+    transform: scale(1.05);
+}
+
+.toggle-icon {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    line-height: 1;
+}
+
+.filters.collapsed .toggle-icon {
+    transform: rotate(0deg);
+}
+
+.filters:not(.collapsed) .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.filter-content {
+    max-height: 1000px;
+    opacity: 1;
+    transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out, margin 0.3s ease;
+    margin-top: 1rem;
+}
+
+.filters.collapsed .filter-content {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+    pointer-events: none;
 }

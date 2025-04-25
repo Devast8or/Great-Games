@@ -23,29 +23,118 @@
                 <button id="load-games">Load Games</button>
             </div>
 
-            <div class="filters">
-                <h3>Ranking Criteria:</h3>
-                <div class="filter-options">
-                    <label>
-                        <input type="checkbox" id="close-games" checked>
-                        Close Games
-                    </label>
-                    <label>
-                        <input type="checkbox" id="lead-changes" checked>
-                        Lead Changes
-                    </label>
-                    <label>
-                        <input type="checkbox" id="extra-innings" checked>
-                        Extra Innings
-                    </label>
-                    <label>
-                        <input type="checkbox" id="high-scoring" checked>
-                        High Scoring
-                    </label>
-                    <label>
-                        <input type="checkbox" id="team-rankings" checked>
-                        Team Rankings
-                    </label>
+            <div class="filters collapsed">
+                <div class="filters-header">
+                    <h3>Ranking Criteria</h3>
+                    <button id="toggle-filters" class="toggle-filters-btn" aria-label="Toggle ranking criteria">
+                        <span class="toggle-icon">&#9660;</span>
+                    </button>
+                </div>
+                <div class="filter-content">
+                    <div class="filter-container">
+                        <div class="filter-category">
+                            <h4>Game Dynamics</h4>
+                            <div class="filter-options">
+                                <div class="filter-toggle-wrapper">
+                                    <input type="checkbox" id="close-games" class="toggle-input" checked>
+                                    <label for="close-games" class="toggle-label">
+                                        <span class="toggle-slider"></span>
+                                        <div class="toggle-text">
+                                            <div class="toggle-name">Close Games</div>
+                                            <div class="toggle-description">Games with narrow score differences</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="filter-toggle-wrapper">
+                                    <input type="checkbox" id="lead-changes" class="toggle-input" checked>
+                                    <label for="lead-changes" class="toggle-label">
+                                        <span class="toggle-slider"></span>
+                                        <div class="toggle-text">
+                                            <div class="toggle-name">Lead Changes</div>
+                                            <div class="toggle-description">Games with multiple lead changes</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="filter-toggle-wrapper">
+                                    <input type="checkbox" id="late-game-drama" class="toggle-input" checked>
+                                    <label for="late-game-drama" class="toggle-label">
+                                        <span class="toggle-slider"></span>
+                                        <div class="toggle-text">
+                                            <div class="toggle-name">Late Game Drama</div>
+                                            <div class="toggle-description">Excitement in the final innings</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="filter-category">
+                            <h4>Game Factors</h4>
+                            <div class="filter-options">
+                                <div class="filter-toggle-wrapper">
+                                    <input type="checkbox" id="extra-innings" class="toggle-input" checked>
+                                    <label for="extra-innings" class="toggle-label">
+                                        <span class="toggle-slider"></span>
+                                        <div class="toggle-text">
+                                            <div class="toggle-name">Extra Innings</div>
+                                            <div class="toggle-description">Games that go beyond 9 innings</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="filter-toggle-wrapper">
+                                    <input type="checkbox" id="high-scoring" class="toggle-input" checked>
+                                    <label for="high-scoring" class="toggle-label">
+                                        <span class="toggle-slider"></span>
+                                        <div class="toggle-text">
+                                            <div class="toggle-name">High Scoring</div>
+                                            <div class="toggle-description">Games with lots of runs</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="filter-toggle-wrapper">
+                                    <input type="checkbox" id="team-rankings" class="toggle-input" checked>
+                                    <label for="team-rankings" class="toggle-label">
+                                        <span class="toggle-slider"></span>
+                                        <div class="toggle-text">
+                                            <div class="toggle-name">Team Rankings</div>
+                                            <div class="toggle-description">Games between highly ranked teams</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="filter-category">
+                            <h4>Statistical Factors</h4>
+                            <div class="filter-options">
+                                <div class="filter-toggle-wrapper">
+                                    <input type="checkbox" id="total-hits" class="toggle-input" checked>
+                                    <label for="total-hits" class="toggle-label">
+                                        <span class="toggle-slider"></span>
+                                        <div class="toggle-text">
+                                            <div class="toggle-name">Total Hits</div>
+                                            <div class="toggle-description">Games with many hits</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="filter-toggle-wrapper">
+                                    <input type="checkbox" id="defensive-plays" class="toggle-input" checked>
+                                    <label for="defensive-plays" class="toggle-label">
+                                        <span class="toggle-slider"></span>
+                                        <div class="toggle-text">
+                                            <div class="toggle-name">Defensive Drama</div>
+                                            <div class="toggle-description">Games with defensive errors</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -73,14 +162,12 @@
                     <img class="team-logo" src="" alt="">
                     <span class="team-name"></span>
                     <span class="team-rank hidden"></span>
-                    <span class="pitcher hidden"></span>
                 </div>
                 <div class="vs">VS</div>
                 <div class="team home">
                     <img class="team-logo" src="" alt="">
                     <span class="team-name"></span>
                     <span class="team-rank hidden"></span>
-                    <span class="pitcher hidden"></span>
                 </div>
             </div>
             <div class="game-info">
@@ -89,20 +176,12 @@
                     <span class="stars"></span>
                     <span class="rating-label">Game Rating</span>
                 </div>
-                <button class="reveal-btn">Reveal Score</button>
-                <div class="score hidden">
-                    <span class="away-score"></span> - <span class="home-score"></span>
-                </div>
-                <div class="watch-links"></div>
+                <div class="score hidden"></div>
             </div>
         </div>
     </template>
 
     <!-- Scripts -->
-    <script src="js/api.js"></script>
-    <script src="js/parser.js"></script>
-    <script src="js/ranker.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/app.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
