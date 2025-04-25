@@ -63,7 +63,7 @@ class GameCard {
             const divElement = document.createElement('span');
             divElement.className = 'team-division';
             divElement.textContent = team.ranking.divisionName;
-            divElement.style.cssText = 'font-size: 0.8rem; color: rgba(255,255,255,0.8);';
+            divElement.style.cssText = 'font-size: 0.9rem; color: rgba(255,255,255,0.8);';
             
             const nameElement = this.element.querySelector(`.${teamType} .team-name`);
             nameElement.parentNode.insertBefore(divElement, nameElement.nextSibling);
@@ -71,6 +71,7 @@ class GameCard {
 
         if (team.ranking?.divisionRank) {
             rankElement.textContent = `Div Rank: ${team.ranking.divisionRank}`;
+            rankElement.style.cssText = 'font-size: 0.9rem;';
             rankElement.classList.remove('hidden');
         } else {
             rankElement.classList.add('hidden');
@@ -477,7 +478,7 @@ class GameCard {
         return `
             <div class="pitcher-container ${teamType}-pitcher-container">
                 <div class="pitcher-header">Starting Pitcher</div>
-                <div class="pitcher-img ${teamType}-pitcher-img">
+                <div class="pitcher-img ${teamType}-pitcher-img" style="width: 170px; height: 170px;">
                     <img src="${imageUrl}"
                          alt="${pitcher.name}"
                          title="${pitcher.name}"

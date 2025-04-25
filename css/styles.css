@@ -165,8 +165,8 @@ footer .container {
 }
 
 .team-logo {
-    width: 50px;
-    height: 50px;
+    width: 90px;
+    height: 90px;
     object-fit: contain;
     background-color: white;
     border-radius: 50%;
@@ -176,6 +176,7 @@ footer .container {
 .team-name {
     font-weight: bold;
     text-align: center;
+    font-size: 1.2rem;
 }
 
 .pitcher {
@@ -300,8 +301,8 @@ footer .container {
 
 /* Team logo in box score */
 .score-team-logo {
-    width: 30px;
-    height: 30px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background-color: #fff;
     object-fit: contain;
