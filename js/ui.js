@@ -15,6 +15,8 @@ class UI {
             loading: document.getElementById('loading'),
             errorMessage: document.getElementById('error-message'),
             noGames: document.getElementById('no-games'),
+            filtersContainer: document.querySelector('.filters'),
+            toggleFiltersBtn: document.getElementById('toggle-filters'),
             filters: {
                 closeGames: document.getElementById('close-games'),
                 leadChanges: document.getElementById('lead-changes'),
@@ -48,6 +50,25 @@ class UI {
         Object.values(this.elements.filters).forEach(filter => {
             filter.addEventListener('change', () => this.refreshGameRankings());
         });
+        
+        // Toggle filters panel
+        this.elements.toggleFiltersBtn.addEventListener('click', () => this.toggleFiltersPanel());
+        this.elements.filtersContainer.querySelector('.filters-header').addEventListener('click', (e) => {
+            // Don't trigger if the click was on the button (already handled)
+            if (!e.target.closest('.toggle-filters-btn')) {
+                this.toggleFiltersPanel();
+            }
+        });
+        
+        // Set initial collapsed state (default to collapsed)
+        const shouldBeCollapsed = localStorage.getItem('filtersCollapsed') !== 'false';
+        if (shouldBeCollapsed) {
+            this.elements.filtersContainer.classList.add('collapsed');
+            this.elements.toggleFiltersBtn.setAttribute('aria-expanded', 'false');
+        } else {
+            this.elements.filtersContainer.classList.remove('collapsed');
+            this.elements.toggleFiltersBtn.setAttribute('aria-expanded', 'true');
+        }
     }
 
     /**
@@ -234,6 +255,24 @@ class UI {
         this.elements.noGames.classList.remove('hidden');
         this.elements.gamesList.classList.add('hidden');
         this.elements.errorMessage.classList.add('hidden');
+    }
+
+    /**
+     * Toggle filters panel visibility
+     */
+    toggleFiltersPanel() {
+        this.elements.filtersContainer.classList.toggle('collapsed');
+        
+        // Update the toggle icon
+        const isCollapsed = this.elements.filtersContainer.classList.contains('collapsed');
+        const toggleIcon = this.elements.toggleFiltersBtn.querySelector('.toggle-icon');
+        
+        // We now only use a single character (down arrow) and rotate it with CSS
+        toggleIcon.innerHTML = '&#9660;';
+        this.elements.toggleFiltersBtn.setAttribute('aria-expanded', !isCollapsed);
+        
+        // Save preference to localStorage
+        localStorage.setItem('filtersCollapsed', isCollapsed);
     }
 }
 

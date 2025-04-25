@@ -277,3 +277,62 @@
         padding: 0.6rem;
     }
 }
+
+/* Responsive styles for modern filters */
+@media (max-width: 992px) {
+    .filter-container {
+        gap: 1.5rem;
+    }
+    
+    .filter-category {
+        min-width: 250px;
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .filter-container {
+        flex-direction: column;
+        gap: 1.2rem;
+    }
+    
+    .filter-category {
+        width: 100%;
+    }
+    
+    .filter-category h4 {
+        font-size: 1rem;
+    }
+    
+    .toggle-name {
+        font-size: 0.95rem;
+    }
+    
+    .toggle-description {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .filters h3 {
+        font-size: 1.2rem;
+    }
+    
+    .filter-category {
+        padding: 0.8rem;
+    }
+    
+    .toggle-slider {
+        width: 44px;
+        height: 22px;
+    }
+    
+    .toggle-slider:before {
+        width: 16px;
+        height: 16px;
+    }
+    
+    .toggle-input:checked + .toggle-label .toggle-slider:before {
+        transform: translateX(22px);
+    }
+}

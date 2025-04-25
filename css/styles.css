@@ -79,22 +79,130 @@ footer .container {
     background-color: #001c48;
 }
 
+/* Modern filter styles */
 .filters h3 {
-    margin-bottom: 1rem;
+    margin-bottom: 1.2rem;
+    color: var(--primary-color);
+    font-size: 1.4rem;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 0.5rem;
 }
 
-.filter-options {
+.filter-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 1.5rem;
+    gap: 2rem;
+    margin-top: 1rem;
 }
 
-.filter-options label {
+.filter-category {
+    flex: 1;
+    min-width: 280px;
+    background-color: #f8f8f8;
+    border-radius: 8px;
+    padding: 1.2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-category:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+}
+
+.filter-category h4 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.filter-category .filter-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Toggle switch styles */
+.filter-toggle-wrapper {
+    position: relative;
+}
+
+.toggle-input {
+    opacity: 0;
+    position: absolute;
+    width: 0;
+    height: 0;
+}
+
+.toggle-label {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
     cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
 }
+
+.toggle-label:hover {
+    background-color: rgba(0,0,0,0.03);
+}
+
+.toggle-slider {
+    display: inline-block;
+    position: relative;
+    width: 50px;
+    height: 24px;
+    background-color: #ccc;
+    border-radius: 24px;
+    margin-right: 12px;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease;
+}
+
+.toggle-slider:before {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: white;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.toggle-input:checked + .toggle-label .toggle-slider {
+    background-color: var(--primary-color);
+}
+
+.toggle-input:checked + .toggle-label .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+.toggle-input:focus + .toggle-label .toggle-slider {
+    box-shadow: 0 0 0 2px rgba(0, 45, 114, 0.2);
+}
+
+.toggle-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.toggle-name {
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.toggle-description {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.2rem;
+}
+
+
+
 
 /* Games Container */
 .games-container {
@@ -771,4 +879,68 @@ footer .container {
 .pitcher-stats {
     font-size: 0.9rem;
     color: #555;
+}
+
+/* Collapsible filters styles */
+.filters {
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-filters-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.toggle-filters-btn:hover {
+    background-color: #001c48;
+    transform: scale(1.05);
+}
+
+.toggle-icon {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    line-height: 1;
+}
+
+.filters.collapsed .toggle-icon {
+    transform: rotate(0deg);
+}
+
+.filters:not(.collapsed) .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.filter-content {
+    max-height: 1000px;
+    opacity: 1;
+    transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out, margin 0.3s ease;
+    margin-top: 1rem;
+}
+
+.filters.collapsed .filter-content {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+    pointer-events: none;
 }
