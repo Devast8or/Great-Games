@@ -20,6 +20,7 @@ class UI {
             filters: {
                 closeGames: document.getElementById('close-games'),
                 leadChanges: document.getElementById('lead-changes'),
+                comebackWins: document.getElementById('comeback-wins'),
                 lateGameDrama: document.getElementById('late-game-drama'),
                 extraInnings: document.getElementById('extra-innings'),
                 highScoring: document.getElementById('high-scoring'),

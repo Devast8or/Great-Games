@@ -103,7 +103,7 @@ Handles all DOM interactions, creates game cards, and manages the user interface
 
 ### API Module
 
-**File:** `js/api.js`
+**File:** `js/mlb/api.js`
 
 Handles all interactions with the MLB Stats API, includes caching functionality.
 
@@ -136,6 +136,7 @@ Handles all interactions with the MLB Stats API, includes caching functionality.
 | `getTeamLogoUrl(teamId)` | Constructs the URL for a team's logo | `teamId` - Number team identifier | String URL for the team's logo |
 | `fetchStartingLineups(gameId)` | Fetches and processes starting lineups for a game | `gameId` - Number game identifier | Promise resolving to starting lineups information |
 | `extractStartingLineups(boxscore)` | Extracts lineup information from boxscore data | `boxscore` - Object with boxscore API response | Object with home and away lineup information |
+| `fetchTeamPitchers(teamId)` | Fetches all starting pitchers for a team with complete stats | `teamId` - Number team identifier | Promise resolving to array of pitcher objects with stats |
 
 ### Parser Module
 
@@ -158,6 +159,7 @@ Processes raw game data into a standardized format for use in the application.
 | `extractFuturePitcher(pitcher)` | Extracts basic pitcher information for future games | `pitcher` - Object with raw future pitcher data | Object with processed future pitcher information or null |
 | `findLastLeadChangeInning(gameData)` | Determines which inning had the final lead change of the game | `gameData` - Object with raw game data | Number representing inning of last lead change |
 | `isWalkoffGame(gameData)` | Determines if game ended with a walk-off win in the bottom of the last inning | `gameData` - Object with raw game data | Boolean indicating if game ended in a walk-off |
+| `findMaximumLeadAndComeback(innings, awayTeamId, homeTeamId, finalAwayScore, finalHomeScore)` | Finds the maximum lead in a game and determines if there was a comeback victory | `innings` - Array of inning data<br>`awayTeamId` - Number away team ID<br>`homeTeamId` - Number home team ID<br>`finalAwayScore` - Number final away score<br>`finalHomeScore` - Number final home score | Object with `maxLead` and `comebackTeamId` indicating if/which team made a comeback |
 
 ### Ranker Module
 
@@ -168,7 +170,16 @@ Scores and ranks MLB games based on excitement factors.
 **Class:** `Ranker`
 
 **Static Properties:**
-- `weights` - Object with scoring weights for different factors (closeGame, leadChanges, etc.)
+- `weights` - Object with scoring weights for different factors:
+  - `closeGame`: 20 - Games with small run differences
+  - `leadChanges`: 15 - Number and timing of lead changes
+  - `lateGameDrama`: 20 - Close games in final innings, late lead changes, walk-offs
+  - `comebackWin`: 10 - Teams overcoming significant deficits to win
+  - `extraInnings`: 10 - Games that go beyond 9 innings
+  - `highScoring`: 10 - Total runs scored with bonuses for balanced high-scoring games
+  - `teamRankings`: 5 - Games between highly ranked teams
+  - `hits`: 5 - Total hits in the game
+  - `errors`: 5 - Errors that add drama
 
 **Static Methods:**
 
@@ -184,6 +195,7 @@ Scores and ranks MLB games based on excitement factors.
 | `calculateRankingsScore(game)` | Calculates score component based on team division rankings | `game` - Object with game data | Number representing score multiplier (0-1) |
 | `calculateHitsScore(game)` | Calculates score component based on total hits in the game | `game` - Object with game data | Number representing score multiplier (0-1) |
 | `calculateErrorsScore(game)` | Calculates score component based on errors adding to game drama | `game` - Object with game data | Number representing score multiplier (0-1) |
+| `calculateComebackScore(game)` | Calculates score component based on comeback wins, where a team overcomes a 3+ run deficit | `game` - Object with game data | Number representing score multiplier (0-1) |
 | `scoreToStars(score)` | Converts numeric excitement score to star rating for display | `score` - Number score (0-100) | Number star rating (1-5) |
 | `getStarSymbols(starRating)` | Generates star symbols (★ and ½) for visual display | `starRating` - Number star rating (1-5) | String of star symbols |
 
@@ -271,7 +283,7 @@ Component for showing team lineups.
 
 ### PitcherDisplay Component
 
-**File:** `js/components/PitcherDisplay.js`
+**File:** `js/mlb/components/PitcherDisplay.js`
 
 Component for showing pitcher information.
 
@@ -289,8 +301,34 @@ Component for showing pitcher information.
 | Method | Description | Input | Output |
 |--------|-------------|-------|--------|
 | `render()` | Creates and returns the pitcher display element with image and stats | None | HTMLElement - Pitcher display element |
+| `showPitcherDetails()` | Opens the detail panel with comprehensive pitcher statistics | None | None, shows the pitcher detail panel |
 | `formatStats()` | Formats pitcher statistics into a readable string for display | None | String formatted stats for display |
 | `update(newPitcher)` | Updates the pitcher display with new data and re-renders | `newPitcher` - Object with updated pitcher data | None, updates the pitcher display |
+
+### PitcherDetailPanel Component
+
+**File:** `js/mlb/components/PitcherDetailPanel.js`
+
+Component for showing detailed pitcher information and team pitcher rankings in a sliding panel.
+
+**Class:** `PitcherDetailPanel`
+
+**Constructor:**
+- `constructor(teamType)`
+  - **Input:** `teamType` - String ('away' or 'home')
+  - **Output:** PitcherDetailPanel instance
+
+**Methods:**
+
+| Method | Description | Input | Output |
+|--------|-------------|-------|--------|
+| `show(pitcher, onClose)` | Opens the panel with detailed pitcher information and stats | `pitcher` - Object with pitcher data<br>`onClose` - Function callback when panel is closed | None, shows the panel with pitcher details |
+| `create(pitcher)` | Creates the panel DOM element and adds it to the page | `pitcher` - Object with pitcher data | None, creates the panel element |
+| `updateContent(pitcher)` | Updates the panel content when showing a different pitcher | `pitcher` - Object with new pitcher data | None, updates panel with new pitcher data |
+| `updatePanelContent(panel, pitcher)` | Updates the HTML content with pitcher stats and rankings | `panel` - HTMLElement panel to update<br>`pitcher` - Object with pitcher data | None, updates panel content |
+| `close()` | Closes the panel with animation and cleanup | None | None, closes the panel |
+| `isShowingPitcher(pitcher)` | Checks if the panel is currently showing a specific pitcher | `pitcher` - Object with pitcher data | Boolean - True if panel is showing this pitcher |
+| `fetchTeamPitcherRankings(teamId)` | Fetches and ranks all starting pitchers from the team by ERA | `teamId` - Number team ID | Promise<Array> - Promise resolving to sorted array of pitchers |
 
 ### PlayerDetailPanel Component
 

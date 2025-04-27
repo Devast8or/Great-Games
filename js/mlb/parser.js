@@ -65,6 +65,10 @@ export class Parser {
         const lastLeadChangeInning = this.findLastLeadChangeInning(game);
         const isWalkoff = this.isWalkoffGame(game);
         
+        // Calculate maximum lead for comeback detection
+        const { maxLead, comebackTeamId } = this.findMaximumLeadAndComeback(innings, awayTeam.team.id, homeTeam.team.id, awayTeam.score, homeTeam.score);
+        const hasComebackWin = comebackTeamId !== null;
+        
         return {
             id: game.gamePk,
             date: game.gameDate,
@@ -101,7 +105,10 @@ export class Parser {
             lineupsLoaded: false,
             lastLeadChangeInning,
             isWalkoff,
-            inning: game.inning || 9
+            inning: game.inning || 9,
+            maxLead,
+            hasComebackWin,
+            comebackTeamId
         };
     }
 
@@ -307,5 +314,70 @@ export class Parser {
         
         // It's a walkoff if home team was tied or behind before their last at-bat
         return homeScoreBeforeLast <= awayFinalScore;
+    }
+
+    /**
+     * Find the maximum lead in a game and determine if there was a comeback win
+     * @param {Array} innings - Innings data
+     * @param {number} awayTeamId - Away team ID
+     * @param {number} homeTeamId - Home team ID
+     * @param {number} finalAwayScore - Final away team score
+     * @param {number} finalHomeScore - Final home team score
+     * @returns {Object} - Object with maxLead and comebackTeamId
+     */
+    static findMaximumLeadAndComeback(innings, awayTeamId, homeTeamId, finalAwayScore, finalHomeScore) {
+        if (!innings?.length) return { maxLead: 0, comebackTeamId: null };
+        
+        let awayScore = 0;
+        let homeScore = 0;
+        let maxLead = 0;
+        let maxLeadTeamId = null;
+        
+        // Track the largest lead during the game
+        for (const inning of innings) {
+            // Add away team runs for this inning
+            if (inning.away?.runs != null) {
+                awayScore += inning.away.runs;
+            }
+            
+            // Check for away team lead
+            if (awayScore > homeScore) {
+                const currentLead = awayScore - homeScore;
+                if (currentLead > maxLead) {
+                    maxLead = currentLead;
+                    maxLeadTeamId = awayTeamId;
+                }
+            }
+            
+            // Add home team runs for this inning
+            if (inning.home?.runs != null) {
+                homeScore += inning.home.runs;
+            }
+            
+            // Check for home team lead
+            if (homeScore > awayScore) {
+                const currentLead = homeScore - awayScore;
+                if (currentLead > maxLead) {
+                    maxLead = currentLead;
+                    maxLeadTeamId = homeTeamId;
+                }
+            }
+        }
+        
+        // Determine if there was a comeback win
+        const awayWon = finalAwayScore > finalHomeScore;
+        const homeWon = finalHomeScore > finalAwayScore;
+        
+        // If max lead was 3+ runs and winner was not the team with the max lead
+        let comebackTeamId = null;
+        if (maxLead >= 3) {
+            if (awayWon && maxLeadTeamId === homeTeamId) {
+                comebackTeamId = awayTeamId;
+            } else if (homeWon && maxLeadTeamId === awayTeamId) {
+                comebackTeamId = homeTeamId;
+            }
+        }
+        
+        return { maxLead, comebackTeamId };
     }
 }

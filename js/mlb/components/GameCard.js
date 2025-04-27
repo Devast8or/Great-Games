@@ -4,6 +4,7 @@
 import Utils from '../utils.js';
 import { API } from '../api.js';
 import LineupDisplay from './LineupDisplay.js';
+import PitcherDisplay from './PitcherDisplay.js';
 
 class GameCard {
     constructor(game, options = {}) {
@@ -281,9 +282,29 @@ class GameCard {
                     gamesPlayed: statData.gamesPlayed || statData.games || '0',
                     era: statData.era || '0.00',
                     wins: statData.wins || '0',
-                    losses: statData.losses || '0'
+                    losses: statData.losses || '0',
+                    // Add additional stats for the pitcher detail panel
+                    inningsPitched: statData.inningsPitched || '0',
+                    hits: statData.hits || '0',
+                    runs: statData.runs || '0',
+                    earnedRuns: statData.earnedRuns || '0',
+                    baseOnBalls: statData.baseOnBalls || '0',
+                    strikeOuts: statData.strikeOuts || '0',
+                    homeRuns: statData.homeRuns || '0',
+                    whip: statData.whip || '0.00'
                 };
             }
+            
+            // Make sure pitcher has teamId property
+            if (!pitcher.teamId && this.game) {
+                // Check which team the pitcher belongs to
+                if (this.game.awayTeam.pitcher && this.game.awayTeam.pitcher.id === pitcher.id) {
+                    pitcher.teamId = this.game.awayTeam.id;
+                } else if (this.game.homeTeam.pitcher && this.game.homeTeam.pitcher.id === pitcher.id) {
+                    pitcher.teamId = this.game.homeTeam.id;
+                }
+            }
+            
         } catch (error) {
             console.error('Error loading pitcher stats:', error);
         }
@@ -377,7 +398,12 @@ class GameCard {
             pitcherDisplays.forEach((display, index) => {
                 const teamType = index === 0 ? 'away' : 'home';
                 if (this.game[teamType + 'Team'].pitcher) {
-                    display.innerHTML = this.cachedPitchers[teamType];
+                    // Clear current content
+                    display.innerHTML = '';
+                    // Add the cached pitcher component to the display
+                    if (this.cachedPitchers[teamType] instanceof HTMLElement) {
+                        display.appendChild(this.cachedPitchers[teamType]);
+                    }
                 }
             });
             return;
@@ -393,17 +419,24 @@ class GameCard {
         if (awayPitcher) this.game.awayTeam.pitcher = awayPitcher;
         if (homePitcher) this.game.homeTeam.pitcher = homePitcher;
         
-        // Cache for future use
+        // Create PitcherDisplay components instead of HTML strings
+        const awayPitcherDisplay = new PitcherDisplay(this.game.awayTeam.pitcher, 'away');
+        const homePitcherDisplay = new PitcherDisplay(this.game.homeTeam.pitcher, 'home');
+        
+        // Cache for future use - store the DOM elements
         this.cachedPitchers = {
-            away: this.createPitcherDisplay(this.game.awayTeam.pitcher, 'away'),
-            home: this.createPitcherDisplay(this.game.homeTeam.pitcher, 'home')
+            away: awayPitcherDisplay.render(),
+            home: homePitcherDisplay.render()
         };
         
-        // Update the displays
+        // Clear and update the displays
         const pitcherDisplays = container.querySelectorAll('.pitcher-display');
         pitcherDisplays.forEach((display, index) => {
             const teamType = index === 0 ? 'away' : 'home';
-            display.innerHTML = this.cachedPitchers[teamType];
+            // Clear current content
+            display.innerHTML = '';
+            // Add the pitcher component to the display
+            display.appendChild(this.cachedPitchers[teamType]);
         });
         
         this.pitchersLoaded = true;

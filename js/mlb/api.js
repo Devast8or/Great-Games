@@ -156,5 +156,106 @@ export const API = {
         });
         
         return lineups;
-    }
+    },
+
+    /**
+     * Fetch all starting pitchers from a team
+     * @param {number} teamId - The team ID to fetch pitchers for
+     * @returns {Promise<Array>} - Promise resolving to an array of pitchers with stats
+     */
+    async fetchTeamPitchers(teamId) {
+        try {
+            const seasonYear = new Date().getFullYear();
+            
+            // Get the team roster with focus on pitchers
+            const roster = await this.apiRequest(`/teams/${teamId}/roster`, {
+                rosterType: 'active',
+                season: seasonYear
+            });
+
+            // Filter for pitchers
+            const pitchersData = roster.roster.filter(player => 
+                player.position.code === '1' // Position code '1' is for pitchers
+            );
+
+            // Get stats for all pitchers in parallel
+            const pitchersWithStats = await Promise.all(
+                pitchersData.map(async player => {
+                    const playerStats = await this.apiRequest(`/people/${player.person.id}/stats`, {
+                        stats: 'season',
+                        season: seasonYear,
+                        group: 'pitching'
+                    });
+                    
+                    let stats = null;
+                    if (playerStats.stats && playerStats.stats[0] && playerStats.stats[0].splits && playerStats.stats[0].splits[0]) {
+                        const statData = playerStats.stats[0].splits[0].stat;
+                        
+                        // Only include starting pitchers (with games started > 0)
+                        if (statData.gamesPitched && statData.gamesStarted > 0) {
+                            stats = {
+                                gamesPlayed: statData.gamesPlayed || statData.games || '0',
+                                era: statData.era || '0.00',
+                                wins: statData.wins || '0',
+                                losses: statData.losses || '0',
+                                inningsPitched: statData.inningsPitched || '0',
+                                hits: statData.hits || '0',
+                                runs: statData.runs || '0',
+                                earnedRuns: statData.earnedRuns || '0',
+                                baseOnBalls: statData.baseOnBalls || '0',
+                                strikeOuts: statData.strikeOuts || '0',
+                                homeRuns: statData.homeRuns || '0',
+                                whip: statData.whip || '0.00',
+                                gamesStarted: statData.gamesStarted || '0'
+                            };
+                        }
+                    }
+                    
+                    // Get detailed player info to ensure we have the correct name
+                    const playerInfo = await this.apiRequest(`/people/${player.person.id}`);
+                    let playerName = 'Unknown Player';
+                    
+                    // Try different approaches to get the player name
+                    if (playerInfo && playerInfo.people && playerInfo.people[0]) {
+                        const person = playerInfo.people[0];
+                        
+                        // First try using fullName
+                        if (person.fullName) {
+                            playerName = person.fullName;
+                        }
+                        // Then try using firstName and lastName if they exist
+                        else if (person.firstName && person.lastName) {
+                            playerName = `${person.firstName} ${person.lastName}`;
+                        }
+                        // As a fallback, use the name from the roster
+                        else if (player.person.fullName) {
+                            playerName = player.person.fullName;
+                        }
+                        // Last resort
+                        else if (player.person.firstName || player.person.lastName) {
+                            playerName = `${player.person.firstName || ''} ${player.person.lastName || ''}`.trim();
+                        }
+                    }
+                    
+                    // Only return pitchers with stats who have started games
+                    if (stats) {
+                        return {
+                            id: player.person.id,
+                            name: playerName,
+                            teamId: teamId,
+                            stats: stats
+                        };
+                    }
+                    return null;
+                })
+            );
+
+            // Remove null entries (pitchers without stats or non-starters)
+            return pitchersWithStats.filter(pitcher => pitcher !== null);
+        }
+        catch (error) {
+            console.error('Error fetching team pitchers:', error);
+            throw error;
+        }
+    },
 };

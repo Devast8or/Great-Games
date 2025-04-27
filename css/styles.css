@@ -615,6 +615,11 @@ footer .container {
     padding: 0.25rem !important;
 }
 
+.player-img-container {
+    position: relative;
+    display: inline-block;
+}
+
 .player-small-img {
     width: 30px;
     height: 30px;
@@ -623,6 +628,15 @@ footer .container {
     background-color: #f0f0f0;
     vertical-align: middle;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.player-hot-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -5px;
+    font-size: 12px;
+    z-index: 2;
+    filter: drop-shadow(0px 0px 1px white);
 }
 
 .lineup-loading, 
@@ -679,17 +693,18 @@ footer .container {
 }
 
 /* Player Detail Panel */
-.player-detail-panel {
+.player-detail-panel, .pitcher-detail-panel {
     position: fixed;
     top: 0;
     height: 100vh;
-    width: 350px;
+    width: 450px; /* Increased from 350px for better fit */
     background-color: var(--card-bg-color);
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
     padding: 20px;
     z-index: 1000;
     transition: transform 0.3s ease-in-out;
     overflow-y: auto;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 .panel-away {
@@ -708,7 +723,7 @@ footer .container {
     transform: translateX(0);
 }
 
-.player-detail-close {
+.player-detail-close, .pitcher-detail-close {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -719,16 +734,16 @@ footer .container {
     color: var(--text-color);
 }
 
-.player-detail-close:hover {
+.player-detail-close:hover, .pitcher-detail-close:hover {
     color: var(--secondary-color);
 }
 
-.player-detail-header {
+.player-detail-header, .pitcher-detail-header {
     text-align: center;
     margin-bottom: 20px;
 }
 
-.player-detail-img {
+.player-detail-img, .pitcher-detail-img {
     width: 200px;
     height: 200px;
     border-radius: 50%;
@@ -739,20 +754,20 @@ footer .container {
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-.player-detail-name {
+.player-detail-name, .pitcher-detail-name {
     font-size: 1.5rem;
     font-weight: bold;
     margin-bottom: 5px;
     color: var(--primary-color);
 }
 
-.player-detail-position {
+.player-detail-position, .pitcher-detail-position {
     font-size: 1.1rem;
     color: #666;
     margin-bottom: 20px;
 }
 
-.player-stats-grid {
+.player-stats-grid, .pitcher-stats-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 15px;
@@ -778,18 +793,8 @@ footer .container {
     color: var(--primary-color);
 }
 
-/* Player Detail Panel Transitions */
-.panel-content {
-    opacity: 1;
-    transition: opacity 0.15s ease-in-out;
-}
-
-.panel-transitioning .panel-content {
-    transition: opacity 0.15s ease-in-out;
-}
-
-/* Team logo in player detail panel */
-.player-team-logo {
+/* Team logo in player/pitcher detail panel */
+.player-team-logo, .pitcher-team-logo {
     text-align: center;
     margin-top: 2rem;
     padding: 1rem;
@@ -943,4 +948,108 @@ footer .container {
     opacity: 0;
     margin-top: 0;
     pointer-events: none;
+}
+
+/* Team Pitcher Rankings Styles */
+.team-pitchers-ranking {
+    margin-top: 2rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+}
+
+.team-pitchers-ranking h3 {
+    color: var(--primary-color);
+    margin-bottom: 0.8rem;
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 0.3rem;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.pitcher-rankings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    table-layout: fixed;
+    background-color: var(--card-bg-color);
+    margin: 0;
+    border: none;
+}
+
+.pitcher-rankings-table th {
+    background-color: #f0f0f0;
+    padding: 0.5rem;
+    text-align: left;
+    font-weight: bold;
+    color: var(--primary-color);
+    border: none;
+    position: relative;
+}
+
+/* Set specific widths for each column */
+.pitcher-rankings-table th:nth-child(1), 
+.pitcher-rankings-table td:nth-child(1) {
+    width: 10%; /* Rank column */
+    text-align: center;
+}
+
+.pitcher-rankings-table th:nth-child(2), 
+.pitcher-rankings-table td:nth-child(2) {
+    width: 25%; /* Name column */
+    text-align: left;
+}
+
+.pitcher-rankings-table th:nth-child(3), 
+.pitcher-rankings-table td:nth-child(3),
+.pitcher-rankings-table th:nth-child(4), 
+.pitcher-rankings-table td:nth-child(4),
+.pitcher-rankings-table th:nth-child(5), 
+.pitcher-rankings-table td:nth-child(5),
+.pitcher-rankings-table th:nth-child(6), 
+.pitcher-rankings-table td:nth-child(6),
+.pitcher-rankings-table th:nth-child(7), 
+.pitcher-rankings-table td:nth-child(7) {
+    width: 13%; /* Other columns */
+    text-align: center;
+}
+
+.pitcher-rankings-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-color);
+    background-color: var(--card-bg-color);
+}
+
+.pitcher-rankings-table tr:last-child td {
+    border-bottom: none;
+}
+
+.pitcher-rankings-table tr:hover td {
+    background-color: #f9f9f9;
+}
+
+/* Highlight current pitcher - keep this but adjust to match the lineup styling */
+.pitcher-rankings-table tr.current-pitcher td {
+    color: var(--primary-color);
+    font-weight: bold;
+    background-color: rgba(0, 45, 114, 0.05);
+}
+
+.pitcher-rankings-table tr.current-pitcher:hover td {
+    background-color: rgba(0, 45, 114, 0.1);
+}
+
+.loading-rankings, .no-data, .error {
+    text-align: center;
+    padding: 1rem 0;
+    color: #666;
+    font-style: italic;
+}
+
+.no-data {
+    color: #888;
+}
+
+.error {
+    color: var(--secondary-color);
 }
