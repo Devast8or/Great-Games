@@ -53,6 +53,32 @@ class PitcherDisplay {
     showPitcherDetails() {
         if (!this.pitcher) return;
         
+        // Make sure the pitcher has a teamId property
+        if (!this.pitcher.teamId) {
+            // Try to get the team ID from the parent container
+            const teamContainer = this.element.closest('.team-lineup-column');
+            if (teamContainer) {
+                // Extract team ID from the team's container class
+                if (teamContainer.classList.contains('away-column')) {
+                    const awayTeam = document.querySelector('.away .team-logo');
+                    if (awayTeam && awayTeam.src) {
+                        const teamIdMatch = awayTeam.src.match(/team-logos\/(\d+)\.svg/);
+                        if (teamIdMatch && teamIdMatch[1]) {
+                            this.pitcher.teamId = teamIdMatch[1];
+                        }
+                    }
+                } else if (teamContainer.classList.contains('home-column')) {
+                    const homeTeam = document.querySelector('.home .team-logo');
+                    if (homeTeam && homeTeam.src) {
+                        const teamIdMatch = homeTeam.src.match(/team-logos\/(\d+)\.svg/);
+                        if (teamIdMatch && teamIdMatch[1]) {
+                            this.pitcher.teamId = teamIdMatch[1];
+                        }
+                    }
+                }
+            }
+        }
+        
         if (this.pitcherPanel.isShowingPitcher(this.pitcher)) {
             this.pitcherPanel.close();
             return;

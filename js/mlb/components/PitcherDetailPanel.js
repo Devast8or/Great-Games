@@ -1,6 +1,8 @@
 /**
  * PitcherDetailPanel component for showing detailed pitcher information
  */
+import { API } from '../api.js';
+
 class PitcherDetailPanel {
     constructor(teamType) {
         this.teamType = teamType;
@@ -89,15 +91,8 @@ class PitcherDetailPanel {
      * @param {HTMLElement} panel - Panel element to update
      * @param {Object} pitcher - Pitcher data to display
      */
-    updatePanelContent(panel, pitcher) {
-        // Check if teamId exists, otherwise omit the team logo section
-        const teamLogoSection = pitcher.teamId ? 
-            `<div class="pitcher-team-logo">
-                <img src="https://www.mlbstatic.com/team-logos/${pitcher.teamId}.svg" 
-                     alt="Team Logo" 
-                     class="team-logo-detail">
-            </div>` : '';
-        
+    async updatePanelContent(panel, pitcher) {
+        // Initial panel content without the team rankings (will be added asynchronously)
         panel.innerHTML = `
             <button class="pitcher-detail-close">&times;</button>
             <div class="panel-content">
@@ -150,9 +145,76 @@ class PitcherDetailPanel {
                         <div class="stat-value">${pitcher.stats.gamesPlayed || '0'}</div>
                     </div>
                 </div>
-                ${teamLogoSection}
+                <div class="team-pitchers-ranking">
+                    <h3>Starting Pitcher Rankings</h3>
+                    <div class="loading-rankings">Loading pitcher rankings...</div>
+                </div>
             </div>
         `;
+
+        // Check if we have a team ID before trying to fetch rankings
+        if (pitcher.teamId) {
+            try {
+                // Get the rankings table container
+                const rankingsContainer = panel.querySelector('.team-pitchers-ranking');
+                
+                // Fetch team pitcher rankings
+                const rankedPitchers = await this.fetchTeamPitcherRankings(pitcher.teamId);
+                
+                if (rankedPitchers.length === 0) {
+                    rankingsContainer.innerHTML = '<h3>Starting Pitcher Rankings</h3><div class="no-data">No ranking data available</div>';
+                    return;
+                }
+                
+                // Build the ranking table
+                let tableHTML = `
+                    <h3>Starting Pitcher Rankings</h3>
+                    <table class="pitcher-rankings-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Name</th>
+                                <th>ERA</th>
+                                <th>WHIP</th>
+                                <th>W-L</th>
+                                <th>IP</th>
+                                <th>K</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                // Add rows for each pitcher
+                rankedPitchers.forEach((rankedPitcher, index) => {
+                    const isCurrentPitcher = rankedPitcher.id === pitcher.id;
+                    const rowClass = isCurrentPitcher ? 'current-pitcher' : '';
+                    tableHTML += `
+                        <tr class="${rowClass}">
+                            <td>${index + 1}</td>
+                            <td>${rankedPitcher.name}</td>
+                            <td>${rankedPitcher.stats.era || '0.00'}</td>
+                            <td>${rankedPitcher.stats.whip || '0.00'}</td>
+                            <td>${rankedPitcher.stats.wins || '0'}-${rankedPitcher.stats.losses || '0'}</td>
+                            <td>${rankedPitcher.stats.inningsPitched || '0'}</td>
+                            <td>${rankedPitcher.stats.strikeOuts || '0'}</td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += `
+                        </tbody>
+                    </table>
+                `;
+                
+                // Update the rankings container with the table
+                rankingsContainer.innerHTML = tableHTML;
+                
+            } catch (error) {
+                console.error('Error loading team pitcher rankings:', error);
+                const rankingsContainer = panel.querySelector('.team-pitchers-ranking');
+                rankingsContainer.innerHTML = '<h3>Starting Pitcher Rankings</h3><div class="error">Error loading team pitcher rankings</div>';
+            }
+        }
     }
 
     /**
@@ -180,6 +242,37 @@ class PitcherDetailPanel {
      */
     isShowingPitcher(pitcher) {
         return this.activePitcher && this.activePitcher.id === pitcher.id;
+    }
+
+    /**
+     * Fetch and rank all starting pitchers from the team
+     * @param {number} teamId - Team ID
+     * @returns {Promise<Array>} - Promise resolving to sorted array of pitchers
+     */
+    async fetchTeamPitcherRankings(teamId) {
+        try {
+            if (!teamId) {
+                console.warn('No teamId provided for pitcher rankings');
+                return [];
+            }
+            
+            console.log('Fetching pitcher rankings for team ID:', teamId);
+            
+            // Fetch all team pitchers
+            const pitchers = await API.fetchTeamPitchers(teamId);
+            
+            console.log('Fetched pitchers:', pitchers.length);
+            
+            // Rank pitchers by ERA (lower is better)
+            return pitchers.sort((a, b) => {
+                const eraA = parseFloat(a.stats.era) || 99; // Default high value if ERA is missing
+                const eraB = parseFloat(b.stats.era) || 99;
+                return eraA - eraB;
+            });
+        } catch (error) {
+            console.error('Error fetching team pitcher rankings:', error);
+            return [];
+        }
     }
 }
 

@@ -294,6 +294,17 @@ class GameCard {
                     whip: statData.whip || '0.00'
                 };
             }
+            
+            // Make sure pitcher has teamId property
+            if (!pitcher.teamId && this.game) {
+                // Check which team the pitcher belongs to
+                if (this.game.awayTeam.pitcher && this.game.awayTeam.pitcher.id === pitcher.id) {
+                    pitcher.teamId = this.game.awayTeam.id;
+                } else if (this.game.homeTeam.pitcher && this.game.homeTeam.pitcher.id === pitcher.id) {
+                    pitcher.teamId = this.game.homeTeam.id;
+                }
+            }
+            
         } catch (error) {
             console.error('Error loading pitcher stats:', error);
         }

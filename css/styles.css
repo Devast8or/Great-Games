@@ -683,13 +683,14 @@ footer .container {
     position: fixed;
     top: 0;
     height: 100vh;
-    width: 350px;
+    width: 450px; /* Increased from 350px for better fit */
     background-color: var(--card-bg-color);
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
     padding: 20px;
     z-index: 1000;
     transition: transform 0.3s ease-in-out;
     overflow-y: auto;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 .panel-away {
@@ -933,4 +934,117 @@ footer .container {
     opacity: 0;
     margin-top: 0;
     pointer-events: none;
+}
+
+/* Team Pitcher Rankings Styles */
+.team-pitchers-ranking {
+    margin-top: 2rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+}
+
+.team-pitchers-ranking h3 {
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.pitcher-rankings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: 6px;
+    overflow: hidden;
+    table-layout: fixed; /* Set fixed layout for more predictable column widths */
+}
+
+.pitcher-rankings-table th {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.6rem;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Set specific widths for each column */
+.pitcher-rankings-table th:nth-child(1), 
+.pitcher-rankings-table td:nth-child(1) {
+    width: 10%; /* Rank column */
+}
+
+.pitcher-rankings-table th:nth-child(2), 
+.pitcher-rankings-table td:nth-child(2) {
+    width: 30%; /* Name column */
+    text-align: left;
+    padding-left: 0.8rem;
+}
+
+.pitcher-rankings-table th:nth-child(3), 
+.pitcher-rankings-table td:nth-child(3),
+.pitcher-rankings-table th:nth-child(4), 
+.pitcher-rankings-table td:nth-child(4) {
+    width: 12%; /* ERA and WHIP columns */
+}
+
+.pitcher-rankings-table th:nth-child(5), 
+.pitcher-rankings-table td:nth-child(5) {
+    width: 14%; /* W-L column */
+}
+
+.pitcher-rankings-table th:nth-child(6), 
+.pitcher-rankings-table td:nth-child(6),
+.pitcher-rankings-table th:nth-child(7), 
+.pitcher-rankings-table td:nth-child(7) {
+    width: 12%; /* IP and K columns */
+}
+
+.pitcher-rankings-table td {
+    padding: 0.6rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.pitcher-rankings-table tr:last-child td {
+    border-bottom: none;
+}
+
+.pitcher-rankings-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.pitcher-rankings-table tr:hover td {
+    background-color: #f0f0f0;
+}
+
+/* Highlight current pitcher */
+.pitcher-rankings-table tr.current-pitcher {
+    background-color: rgba(0, 45, 114, 0.1); /* Light blue background */
+    font-weight: bold;
+}
+
+.pitcher-rankings-table tr.current-pitcher td {
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--primary-color);
+}
+
+.pitcher-rankings-table tr.current-pitcher:hover td {
+    background-color: rgba(0, 45, 114, 0.15);
+}
+
+.loading-rankings, .no-data, .error {
+    text-align: center;
+    padding: 1rem;
+    color: #666;
+    font-style: italic;
+}
+
+.no-data {
+    color: #888;
+}
+
+.error {
+    color: var(--secondary-color);
 }
