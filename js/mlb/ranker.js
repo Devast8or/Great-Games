@@ -6,14 +6,15 @@ export class Ranker {
      * Define scoring weights for different factors
      */
     static weights = {
-        closeGame: 25,      // Reduced from 30
-        leadChanges: 20,    // Maintained
-        lateGameDrama: 15,  // New factor
+        closeGame: 20,      // Reduced from 25
+        leadChanges: 15,    // Reduced from 20
+        lateGameDrama: 20,  // Increased from 15
+        comebackWin: 10,    // New factor for dramatic comebacks
         extraInnings: 10,   // Maintained
         highScoring: 10,    // Maintained
-        teamRankings: 10,   // Maintained
-        hits: 5,           // Reduced from 10
-        errors: 5          // Reduced from 10
+        teamRankings: 5,    // Reduced from 10
+        hits: 5,            // Maintained
+        errors: 5           // Maintained
     };
 
     /**
@@ -55,6 +56,11 @@ export class Ranker {
         // Add late game drama scoring
         if (options.lateGameDrama) {
             score += this.calculateLateGameDramaScore(game) * this.weights.lateGameDrama;
+        }
+        
+        // Add comeback win scoring
+        if (options.comebackWins) {
+            score += this.calculateComebackScore(game) * this.weights.comebackWin;
         }
         
         if (options.extraInnings && game.isExtraInnings) {
@@ -125,13 +131,17 @@ export class Ranker {
         let score = 0;
         
         // Close game in final innings (7th or later)
-        if (game.runDifference <= 2 && game.inning >= 7) {
-            score += 0.5;
+        if (game.runDifference <= 1 && game.inning >= 8) {
+            score += 0.7; // Increased for very close late games (1-run difference)
+        } else if (game.runDifference <= 2 && game.inning >= 7) {
+            score += 0.4; // Standard close game bonus
         }
         
-        // Lead changes in late innings
-        if (game.lastLeadChangeInning >= 7) {
-            score += 0.3;
+        // Lead changes in very late innings (more dramatic)
+        if (game.lastLeadChangeInning >= 8) {
+            score += 0.5; // Increased for 8th inning or later
+        } else if (game.lastLeadChangeInning >= 7) {
+            score += 0.3; // Standard for 7th inning
         }
         
         // Walk-off victory
@@ -234,6 +244,23 @@ export class Ranker {
         if (totalErrors === 2) return 0.5;  // Couple of mistakes
         if (totalErrors === 1) return 0.25; // One key error
         return 0;                           // Clean game
+    }
+
+    /**
+     * Calculate score component for comeback wins
+     * @param {Object} game - Game object
+     * @returns {number} - Score multiplier (0-1)
+     */
+    static calculateComebackScore(game) {
+        if (!game.hasComebackWin) return 0;
+        
+        // More points for larger comebacks
+        if (game.maxLead >= 6) return 1;       // Massive comeback
+        if (game.maxLead >= 5) return 0.85;    // Very large comeback
+        if (game.maxLead >= 4) return 0.7;     // Large comeback
+        if (game.maxLead >= 3) return 0.5;     // Standard comeback
+        
+        return 0; // No comeback
     }
 
     /**
