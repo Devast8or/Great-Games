@@ -258,4 +258,196 @@ export const API = {
             throw error;
         }
     },
+
+    /**
+     * Fetch detailed box score with player statistics for milestones detection
+     * @param {string} gameId - Game ID
+     * @returns {Promise<Object>} - Box score with detailed player statistics
+     */
+    async fetchDetailedBoxScore(gameId) {
+        try {
+            const endpoint = `/game/${gameId}/boxscore`;
+            const params = { hydrate: 'game,stats,team,lineup' };
+            const data = await this.apiRequest(endpoint, params);
+            return data;
+        } catch (error) {
+            console.error(`Error fetching detailed box score for game ${gameId}:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Fetch current standings for playoff implications calculation
+     * @param {string} date - Date in YYYY-MM-DD format
+     * @returns {Promise<Object>} - Detailed standings data including games back
+     */
+    async fetchDetailedStandings(date) {
+        try {
+            const endpoint = '/standings';
+            const params = {
+                leagueId: '103,104', // Both AL and NL
+                season: date.substring(0, 4),
+                date,
+                hydrate: 'team,division,league,wildCard'
+            };
+            const data = await this.apiRequest(endpoint, params);
+            return data;
+        } catch (error) {
+            console.error(`Error fetching detailed standings for date ${date}:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Process detailed standings data for use in playoff implications calculation
+     * @param {Object} standingsData - Raw standings data
+     * @returns {Object} - Processed standings with playoff information
+     */
+    processDetailedStandings(standingsData) {
+        const detailedRankings = {};
+        
+        if (standingsData?.records) {
+            standingsData.records.forEach(record => {
+                const divisionName = Utils.formatDivisionName(record.division?.name);
+                const leagueName = record.league?.name || '';
+                
+                record.teamRecords?.forEach(teamRecord => {
+                    detailedRankings[teamRecord.team.id] = {
+                        divisionRank: parseInt(teamRecord.divisionRank) || 0,
+                        divisionName,
+                        leagueName,
+                        winPercentage: teamRecord.winningPercentage || 0,
+                        gamesBack: teamRecord.gamesBack || 0,
+                        wildCardRank: teamRecord.wildCardRank || 0,
+                        wildCardGamesBack: teamRecord.wildCardGamesBack || 0,
+                        leagueRank: teamRecord.leagueRank || 0,
+                        wins: teamRecord.wins || 0,
+                        losses: teamRecord.losses || 0,
+                        eliminationNumber: teamRecord.eliminationNumber || 0,
+                        sportRank: teamRecord.sportRank || 0,
+                        isInFirstPlace: teamRecord.divisionRank === '1',
+                        isInWildCard: parseInt(teamRecord.wildCardRank) <= 3
+                    };
+                });
+            });
+        }
+        
+        return detailedRankings;
+    },
+
+    /**
+     * Process box score to extract player milestone information
+     * @param {Object} boxscoreData - Raw box score data
+     * @returns {Object} - Processed player milestone information
+     */
+    processPlayerMilestones(boxscoreData) {
+        const milestones = {
+            away: {
+                hasMilestones: false,
+                noHitter: false,
+                perfectGame: false,
+                cycleHitter: null,
+                multiHomeRunHitters: [],
+                highRbiHitters: [],
+                highStrikeoutPitcher: null
+            },
+            home: {
+                hasMilestones: false,
+                noHitter: false,
+                perfectGame: false,
+                cycleHitter: null,
+                multiHomeRunHitters: [],
+                highRbiHitters: [],
+                highStrikeoutPitcher: null
+            }
+        };
+        
+        if (!boxscoreData?.teams) return milestones;
+        
+        // Process each team
+        ['away', 'home'].forEach(teamType => {
+            const oppositeTeam = teamType === 'away' ? 'home' : 'away';
+            const team = boxscoreData.teams[teamType];
+            const opposingTeam = boxscoreData.teams[oppositeTeam];
+            
+            // Check for no-hitter/perfect game
+            if (opposingTeam?.teamStats?.batting?.hits === 0) {
+                milestones[teamType].noHitter = true;
+                milestones[teamType].hasMilestones = true;
+                
+                // Perfect game: no hits, walks, HBP, or errors
+                const battingStats = opposingTeam?.teamStats?.batting;
+                const fieldingStats = team?.teamStats?.fielding;
+                if (battingStats && 
+                    battingStats.baseOnBalls === 0 && 
+                    battingStats.hitByPitch === 0 &&
+                    fieldingStats && 
+                    fieldingStats.errors === 0) {
+                    milestones[teamType].perfectGame = true;
+                }
+            }
+            
+            // Process each player in the team
+            if (team?.players) {
+                Object.values(team.players).forEach(player => {
+                    // Skip if no stats available
+                    if (!player?.stats?.batting && !player?.stats?.pitching) return;
+                    
+                    // Check for hitting milestones
+                    if (player?.stats?.batting) {
+                        const battingStats = player.stats.batting;
+                        
+                        // Multi-home run games
+                        if (battingStats.homeRuns >= 2) {
+                            milestones[teamType].multiHomeRunHitters.push({
+                                id: player.person.id,
+                                name: Utils.getPlayerName(player.person),
+                                homeRuns: battingStats.homeRuns
+                            });
+                            milestones[teamType].hasMilestones = true;
+                        }
+                        
+                        // High RBI games (5+ RBIs)
+                        if (battingStats.rbi >= 5) {
+                            milestones[teamType].highRbiHitters.push({
+                                id: player.person.id,
+                                name: Utils.getPlayerName(player.person),
+                                rbi: battingStats.rbi
+                            });
+                            milestones[teamType].hasMilestones = true;
+                        }
+                        
+                        // Check for cycle (single, double, triple, HR)
+                        if (battingStats.singles > 0 && 
+                            battingStats.doubles > 0 && 
+                            battingStats.triples > 0 && 
+                            battingStats.homeRuns > 0) {
+                            milestones[teamType].cycleHitter = {
+                                id: player.person.id,
+                                name: Utils.getPlayerName(player.person)
+                            };
+                            milestones[teamType].hasMilestones = true;
+                        }
+                    }
+                    
+                    // Check for pitching milestones
+                    if (player?.stats?.pitching) {
+                        const pitchingStats = player.stats.pitching;
+                        
+                        // High strikeout games (10+ Ks)
+                        if (pitchingStats.strikeOuts >= 10) {
+                            milestones[teamType].highStrikeoutPitcher = {
+                                id: player.person.id,
+                                name: Utils.getPlayerName(player.person),
+                                strikeOuts: pitchingStats.strikeOuts
+                            };
+                            milestones[teamType].hasMilestones = true;
+                        }
+                    }
+                });
+            }
+        });
+        
+        return milestones;
+    },
 };

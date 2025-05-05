@@ -430,4 +430,82 @@ export class Parser {
         // Convert back to array
         return Object.values(gamesByDateAndTeams);
     }
+
+    /**
+     * Enhance game objects with detailed information for advanced metrics
+     * @param {Array} games - Array of basic game objects
+     * @param {string} date - Date in YYYY-MM-DD format
+     * @returns {Promise<Array>} - Promise resolving to enhanced games
+     */
+    static async enhanceGamesWithDetailedData(games, date) {
+        if (!games?.length) return [];
+
+        try {
+            // Fetch detailed standings once for the date
+            const detailedStandingsData = await API.fetchDetailedStandings(date);
+            const detailedRankings = API.processDetailedStandings(detailedStandingsData);
+            
+            // Process each game in parallel with detailed data
+            const enhancedGames = await Promise.all(
+                games.map(async game => {
+                    try {
+                        return await this.enhanceSingleGameWithDetailedData(game, detailedRankings);
+                    } catch (error) {
+                        console.error(`Error enhancing game ${game.id}:`, error);
+                        return game; // Return original game if enhancement fails
+                    }
+                })
+            );
+            
+            return enhancedGames;
+        } catch (error) {
+            console.error('Error fetching detailed data:', error);
+            return games; // Return original games if overall enhancement fails
+        }
+    }
+
+    /**
+     * Enhance a single game with detailed information
+     * @param {Object} game - Basic game object
+     * @param {Object} detailedRankings - Detailed rankings data
+     * @returns {Promise<Object>} - Promise resolving to enhanced game
+     */
+    static async enhanceSingleGameWithDetailedData(game, detailedRankings) {
+        // Add detailed rankings for playoff implications
+        if (detailedRankings) {
+            // Away team detailed rankings
+            if (detailedRankings[game.awayTeam.id]) {
+                game.awayTeam.detailedRanking = detailedRankings[game.awayTeam.id];
+            }
+            
+            // Home team detailed rankings
+            if (detailedRankings[game.homeTeam.id]) {
+                game.homeTeam.detailedRanking = detailedRankings[game.homeTeam.id];
+            }
+        }
+
+        // Only fetch player milestones for completed games
+        if (!game.isFuture && game.status === 'Final') {
+            try {
+                // Fetch detailed box score for player milestone detection
+                const boxScoreData = await API.fetchDetailedBoxScore(game.id);
+                const milestones = API.processPlayerMilestones(boxScoreData);
+                
+                // Add milestones to game object
+                game.playerMilestones = milestones;
+                
+                // Flag game if any notable milestones were achieved
+                game.hasPlayerMilestones = milestones.away.hasMilestones || milestones.home.hasMilestones;
+            } catch (error) {
+                console.error(`Error fetching milestones for game ${game.id}:`, error);
+                game.hasPlayerMilestones = false;
+                game.playerMilestones = {
+                    away: { hasMilestones: false },
+                    home: { hasMilestones: false }
+                };
+            }
+        }
+        
+        return game;
+    }
 }
