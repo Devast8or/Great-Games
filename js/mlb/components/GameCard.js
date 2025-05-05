@@ -41,11 +41,33 @@ class GameCard {
         this.element.querySelector('.away .team-name').textContent = this.game.awayTeam.name;
         this.element.querySelector('.away .team-logo').src = this.game.awayTeam.logoUrl;
         this.element.querySelector('.away .team-logo').alt = this.game.awayTeam.name + ' logo';
+        
+        // Add team record for away team
+        if (this.game.awayTeam.record) {
+            const awayRecord = document.createElement('span');
+            awayRecord.className = 'team-record';
+            awayRecord.textContent = `(${this.game.awayTeam.record.wins}-${this.game.awayTeam.record.losses})`;
+            awayRecord.style.cssText = 'margin-left: 5px; font-size: 0.9rem;';
+            
+            const awayNameElement = this.element.querySelector('.away .team-name');
+            awayNameElement.appendChild(awayRecord);
+        }
 
         // Home team
         this.element.querySelector('.home .team-name').textContent = this.game.homeTeam.name;
         this.element.querySelector('.home .team-logo').src = this.game.homeTeam.logoUrl;
         this.element.querySelector('.home .team-logo').alt = this.game.homeTeam.name + ' logo';
+        
+        // Add team record for home team
+        if (this.game.homeTeam.record) {
+            const homeRecord = document.createElement('span');
+            homeRecord.className = 'team-record';
+            homeRecord.textContent = `(${this.game.homeTeam.record.wins}-${this.game.homeTeam.record.losses})`;
+            homeRecord.style.cssText = 'margin-left: 5px; font-size: 0.9rem;';
+            
+            const homeNameElement = this.element.querySelector('.home .team-name');
+            homeNameElement.appendChild(homeRecord);
+        }
 
         // Division rankings if available
         this.renderDivisionInfo('away');
