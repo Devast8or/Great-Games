@@ -14,7 +14,8 @@ export class Ranker {
         highScoring: 10,    // Maintained
         teamRankings: 5,    // Reduced from 10
         hits: 5,            // Maintained
-        errors: 5           // Maintained
+        errors: 5,          // Maintained
+        scoringDistribution: 10  // NEW: Rewards scoring across multiple innings
     };
 
     /**
@@ -81,6 +82,10 @@ export class Ranker {
 
         if (options.errors) {
             score += this.calculateErrorsScore(game) * this.weights.errors;
+        }
+
+        if (options.scoringDistribution) {
+            score += this.calculateScoringDistributionScore(game) * this.weights.scoringDistribution;
         }
         
         return Math.min(100, score);
@@ -261,6 +266,34 @@ export class Ranker {
         if (game.maxLead >= 3) return 0.5;     // Standard comeback
         
         return 0; // No comeback
+    }
+
+    /**
+     * Calculate score component for scoring distribution across innings
+     * @param {Object} game - Game object
+     * @returns {number} - Score multiplier (0-1)
+     */
+    static calculateScoringDistributionScore(game) {
+        // Count innings with scoring
+        const inningsWithScoring = game.inningScores.filter(
+            inning => inning.away > 0 || inning.home > 0
+        ).length;
+        
+        // Calculate as a ratio of innings with scoring to total innings
+        // with bonuses for more distributed scoring
+        const totalInnings = game.innings;
+        const distributionRatio = inningsWithScoring / totalInnings;
+        
+        // More points for more innings with scoring
+        if (distributionRatio >= 0.9) return 1;      // Almost every inning had scoring
+        if (distributionRatio >= 0.8) return 0.9;    // Most innings had scoring
+        if (distributionRatio >= 0.7) return 0.8;    // Many innings had scoring
+        if (distributionRatio >= 0.6) return 0.65;   // More than half innings had scoring
+        if (distributionRatio >= 0.5) return 0.5;    // Half of innings had scoring
+        if (distributionRatio >= 0.4) return 0.3;    // Some innings had scoring
+        if (distributionRatio >= 0.3) return 0.2;    // Few innings had scoring
+        
+        return 0.1; // Very few innings had scoring
     }
 
     /**

@@ -26,7 +26,8 @@ class UI {
                 highScoring: document.getElementById('high-scoring'),
                 teamRankings: document.getElementById('team-rankings'),
                 hits: document.getElementById('total-hits'),
-                errors: document.getElementById('defensive-plays')
+                errors: document.getElementById('defensive-plays'),
+                scoringDistribution: document.getElementById('scoring-distribution')
             }
         };
         

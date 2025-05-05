@@ -29,7 +29,8 @@ export class Parser {
             });
         });
         
-        return games;
+        // Deduplicate games before returning
+        return this.deduplicateGames(games);
     }
 
     /**
@@ -81,7 +82,11 @@ export class Parser {
                 errors: awayErrors,
                 pitcher: this.extractPitcher(awayTeam.probablePitcher),
                 lineup: [],
-                logoUrl: API.getTeamLogoUrl(awayTeam.team.id)
+                logoUrl: API.getTeamLogoUrl(awayTeam.team.id),
+                record: {
+                    wins: awayTeam.leagueRecord?.wins || 0,
+                    losses: awayTeam.leagueRecord?.losses || 0
+                }
             },
             homeTeam: {
                 id: homeTeam.team.id,
@@ -91,7 +96,11 @@ export class Parser {
                 errors: homeErrors,
                 pitcher: this.extractPitcher(homeTeam.probablePitcher),
                 lineup: [],
-                logoUrl: API.getTeamLogoUrl(homeTeam.team.id)
+                logoUrl: API.getTeamLogoUrl(homeTeam.team.id),
+                record: {
+                    wins: homeTeam.leagueRecord?.wins || 0,
+                    losses: homeTeam.leagueRecord?.losses || 0
+                }
             },
             venue: game.venue?.name || 'Unknown Venue',
             innings: innings.length,
@@ -200,7 +209,8 @@ export class Parser {
             });
         });
         
-        return games;
+        // Deduplicate future games before returning
+        return this.deduplicateGames(games);
     }
 
     /**
@@ -223,14 +233,22 @@ export class Parser {
                 name: awayTeam.team.name,
                 logoUrl: API.getTeamLogoUrl(awayTeam.team.id),
                 pitcher: this.extractFuturePitcher(awayTeam.probablePitcher),
-                lineup: []
+                lineup: [],
+                record: {
+                    wins: awayTeam.leagueRecord?.wins || 0,
+                    losses: awayTeam.leagueRecord?.losses || 0
+                }
             },
             homeTeam: {
                 id: homeTeam.team.id,
                 name: homeTeam.team.name,
                 logoUrl: API.getTeamLogoUrl(homeTeam.team.id),
                 pitcher: this.extractFuturePitcher(homeTeam.probablePitcher),
-                lineup: []
+                lineup: [],
+                record: {
+                    wins: homeTeam.leagueRecord?.wins || 0,
+                    losses: homeTeam.leagueRecord?.losses || 0
+                }
             },
             venue: game.venue?.name || 'Unknown Venue'
         };
@@ -379,5 +397,37 @@ export class Parser {
         }
         
         return { maxLead, comebackTeamId };
+    }
+
+    /**
+     * Remove duplicate games between the same teams on the same day
+     * @param {Array} games - Array of processed game objects
+     * @returns {Array} - Array of unique games
+     */
+    static deduplicateGames(games) {
+        // Group games by date and teams involved
+        const gamesByDateAndTeams = {};
+        
+        games.forEach(game => {
+            // Format the date to YYYY-MM-DD to ensure consistent comparison
+            const gameDate = new Date(game.date).toISOString().split('T')[0];
+            
+            // Create a consistent key for the teams regardless of home/away
+            // Use both orderings to ensure we catch all duplicates
+            const awayId = game.awayTeam.id;
+            const homeId = game.homeTeam.id;
+            
+            // Create a key that uniquely identifies games between these teams on this date
+            const key = `${gameDate}-${Math.min(awayId, homeId)}-${Math.max(awayId, homeId)}`;
+            
+            // Either add this game or keep the game with more runs if it exists
+            if (!gamesByDateAndTeams[key] || 
+                (game.totalRuns > gamesByDateAndTeams[key].totalRuns)) {
+                gamesByDateAndTeams[key] = game;
+            }
+        });
+        
+        // Convert back to array
+        return Object.values(gamesByDateAndTeams);
     }
 }
