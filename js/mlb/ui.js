@@ -27,7 +27,10 @@ class UI {
                 teamRankings: document.getElementById('team-rankings'),
                 hits: document.getElementById('total-hits'),
                 errors: document.getElementById('defensive-plays'),
-                scoringDistribution: document.getElementById('scoring-distribution')
+                scoringDistribution: document.getElementById('scoring-distribution'),
+                rivalryGame: document.getElementById('rivalry-game'),
+                playerMilestones: document.getElementById('player-milestones'),
+                seasonalContext: document.getElementById('seasonal-context')
             }
         };
         
@@ -120,28 +123,44 @@ class UI {
      */
     async loadCompletedGames(date) {
         console.log('Fetching completed games and standings...');
-        const [gamesData, standingsData] = await Promise.all([
-            API.fetchGames(date),
-            API.fetchStandings(date)
-        ]);
+        
+        try {
+            this.showLoading();
+            
+            // Step 1: Fetch the basic game and standings data
+            const [gamesData, standingsData] = await Promise.all([
+                API.fetchGames(date),
+                API.fetchStandings(date)
+            ]);
 
-        console.log('Games data:', gamesData);
-        console.log('Standings data:', standingsData);
+            console.log('Games data:', gamesData);
+            console.log('Standings data:', standingsData);
 
-        const teamRankings = API.processTeamRankings(standingsData);
-        const games = Parser.processGames(gamesData);
+            // Step 2: Process the basic data
+            const teamRankings = API.processTeamRankings(standingsData);
+            let games = Parser.processGames(gamesData);
 
-        console.log('Processed games:', games);
+            console.log('Processed games:', games);
 
-        // Add rankings to games
-        games.forEach(game => {
-            game.awayTeam.ranking = teamRankings[game.awayTeam.id] || { divisionRank: 0 };
-            game.homeTeam.ranking = teamRankings[game.homeTeam.id] || { divisionRank: 0 };
-        });
+            // Step 3: Add rankings to games
+            games.forEach(game => {
+                game.awayTeam.ranking = teamRankings[game.awayTeam.id] || { divisionRank: 0 };
+                game.homeTeam.ranking = teamRankings[game.homeTeam.id] || { divisionRank: 0 };
+            });
 
-        this.games = games;
-        this.isFutureGames = false;
-        this.displayGames();
+            // Step 4: Enhance games with detailed data for advanced metrics
+            console.log('Enhancing games with detailed data...');
+            games = await Parser.enhanceGamesWithDetailedData(games, date);
+            console.log('Enhanced games:', games);
+
+            this.games = games;
+            this.isFutureGames = false;
+            this.displayGames();
+        } catch (error) {
+            console.error('Error loading games:', error);
+            this.showError(error.message || 'Failed to load games');
+            this.hideLoading();
+        }
     }
 
     /**

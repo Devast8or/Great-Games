@@ -223,6 +223,11 @@ class GameCard {
         
         ratingElement.style.cssText = 'margin: 0.5rem 0; text-align: center; color: white;';
         
+        // Add click event listener to stars to log detailed scoring breakdown
+        const starsElement = ratingElement.querySelector('.stars');
+        starsElement.style.cursor = 'pointer';
+        starsElement.addEventListener('click', () => this.logScoringDetails());
+        
         const teamsContainer = this.element.querySelector('.teams');
         teamsContainer.parentNode.insertBefore(ratingElement, teamsContainer);
         
@@ -231,6 +236,472 @@ class GameCard {
         if (infoRating) {
             infoRating.classList.add('hidden');
         }
+    }
+
+    /**
+     * Log detailed scoring breakdown to console
+     */
+    logScoringDetails() {
+        const game = this.game;
+        try {
+            console.group(`Scoring Breakdown for ${game.awayTeam.name} @ ${game.homeTeam.name}`);
+        } catch (e) {
+            console.log(`----- SCORING BREAKDOWN FOR ${game.awayTeam.name} @ ${game.homeTeam.name} -----`);
+        }
+        
+        console.log(`Total Excitement Score: ${game.excitementScore} points (${this.getStarRating()} stars)`);
+        console.log(`Game Date: ${new Date(game.date).toLocaleDateString()}`);
+        console.log(`Final Score: ${game.awayTeam.name} ${game.awayTeam.score}, ${game.homeTeam.name} ${game.homeTeam.score}`);
+        
+        // First, log basic game metrics
+        try {
+            console.group('Game Metrics:');
+        } catch (e) {
+            console.log('----- GAME METRICS -----');
+        }
+        
+        console.log(`Run Difference: ${game.runDifference}`);
+        console.log(`Lead Changes: ${game.leadChanges}`);
+        console.log(`Extra Innings: ${game.isExtraInnings ? 'Yes (' + game.innings + ' innings)' : 'No'}`);
+        console.log(`Total Runs: ${game.totalRuns}`);
+        console.log(`Last Lead Change: Inning #${game.lastLeadChangeInning}`);
+        console.log(`Walk-off Win: ${game.isWalkoff ? 'Yes' : 'No'}`);
+        console.log(`Maximum Lead: ${game.maxLead} runs`);
+        console.log(`Comeback Win: ${game.hasComebackWin ? 'Yes' : 'No'}`);
+        console.log(`Total Hits: ${(game.awayTeam.hits || 0) + (game.homeTeam.hits || 0)}`);
+        console.log(`Total Errors: ${(game.awayTeam.errors || 0) + (game.homeTeam.errors || 0)}`);
+        
+        try {
+            console.groupEnd();
+        } catch (e) {
+            console.log('----- END GAME METRICS -----');
+        }
+
+        // Get the Ranker class to calculate scores for each criterion
+        import('../ranker.js').then(module => {
+            const Ranker = module.Ranker;
+            
+            try {
+                console.group('Detailed Scoring Breakdown:');
+            } catch (e) {
+                console.log('----- DETAILED SCORING BREAKDOWN -----');
+            }
+            
+            // Create a table for the scoring breakdown
+            console.table({
+                'Close Game': {
+                    'Raw Score': this.formatScore(Ranker.calculateCloseGameScore(game)),
+                    'Weight': Ranker.weights.closeGame,
+                    'Weighted Score': this.formatScore(Ranker.calculateCloseGameScore(game) * Ranker.weights.closeGame),
+                    'Description': this.getCloseGameDescription(game.runDifference)
+                },
+                'Lead Changes': {
+                    'Raw Score': this.formatScore(Ranker.calculateLeadChangesScore(game)),
+                    'Weight': Ranker.weights.leadChanges,
+                    'Weighted Score': this.formatScore(Ranker.calculateLeadChangesScore(game) * Ranker.weights.leadChanges),
+                    'Description': `${game.leadChanges} lead changes, last in inning #${game.lastLeadChangeInning}`
+                },
+                'Late Game Drama': {
+                    'Raw Score': this.formatScore(Ranker.calculateLateGameDramaScore(game)),
+                    'Weight': Ranker.weights.lateGameDrama,
+                    'Weighted Score': this.formatScore(Ranker.calculateLateGameDramaScore(game) * Ranker.weights.lateGameDrama),
+                    'Description': this.getLateDramaDescription(game)
+                },
+                'Comeback Win': {
+                    'Raw Score': this.formatScore(Ranker.calculateComebackScore(game)),
+                    'Weight': Ranker.weights.comebackWin,
+                    'Weighted Score': this.formatScore(Ranker.calculateComebackScore(game) * Ranker.weights.comebackWin),
+                    'Description': game.hasComebackWin ? `Comeback from ${game.maxLead}-run deficit` : 'No comeback'
+                },
+                'Extra Innings': {
+                    'Raw Score': this.formatScore(Ranker.calculateExtraInningsScore(game)),
+                    'Weight': Ranker.weights.extraInnings,
+                    'Weighted Score': this.formatScore(Ranker.calculateExtraInningsScore(game) * Ranker.weights.extraInnings),
+                    'Description': game.isExtraInnings ? `${game.innings - 9} extra innings played` : 'No extra innings'
+                },
+                'High Scoring': {
+                    'Raw Score': this.formatScore(Ranker.calculateHighScoringScore(game)),
+                    'Weight': Ranker.weights.highScoring,
+                    'Weighted Score': this.formatScore(Ranker.calculateHighScoringScore(game) * Ranker.weights.highScoring),
+                    'Description': `${game.totalRuns} total runs scored`
+                },
+                'Team Rankings': {
+                    'Raw Score': this.formatScore(Ranker.calculateRankingsScore(game)),
+                    'Weight': Ranker.weights.teamRankings,
+                    'Weighted Score': this.formatScore(Ranker.calculateRankingsScore(game) * Ranker.weights.teamRankings),
+                    'Description': this.getTeamRankingsDescription(game)
+                },
+                'Total Hits': {
+                    'Raw Score': this.formatScore(Ranker.calculateHitsScore(game)),
+                    'Weight': Ranker.weights.hits,
+                    'Weighted Score': this.formatScore(Ranker.calculateHitsScore(game) * Ranker.weights.hits),
+                    'Description': `${(game.awayTeam.hits || 0) + (game.homeTeam.hits || 0)} total hits`
+                },
+                'Defensive Plays': {
+                    'Raw Score': this.formatScore(Ranker.calculateErrorsScore(game)),
+                    'Weight': Ranker.weights.errors,
+                    'Weighted Score': this.formatScore(Ranker.calculateErrorsScore(game) * Ranker.weights.errors),
+                    'Description': `${(game.awayTeam.errors || 0) + (game.homeTeam.errors || 0)} total errors`
+                },
+                'Scoring Distribution': {
+                    'Raw Score': this.formatScore(Ranker.calculateScoringDistributionScore(game)),
+                    'Weight': Ranker.weights.scoringDistribution,
+                    'Weighted Score': this.formatScore(Ranker.calculateScoringDistributionScore(game) * Ranker.weights.scoringDistribution),
+                    'Description': this.getScoringDistributionDescription(game)
+                },
+                'Rivalry Game': {
+                    'Raw Score': this.formatScore(Ranker.calculateRivalryScore(game)),
+                    'Weight': Ranker.weights.rivalryGame,
+                    'Weighted Score': this.formatScore(Ranker.calculateRivalryScore(game) * Ranker.weights.rivalryGame),
+                    'Description': Ranker.calculateRivalryScore(game) > 0 ? 'Historical rivalry matchup' : 'Not a notable rivalry'
+                },
+                'Player Milestones': {
+                    'Raw Score': this.formatScore(Ranker.calculatePlayerMilestonesScore(game)),
+                    'Weight': Ranker.weights.playerMilestones,
+                    'Weighted Score': this.formatScore(Ranker.calculatePlayerMilestonesScore(game) * Ranker.weights.playerMilestones),
+                    'Description': this.getPlayerMilestonesDescription(game)
+                },
+                'Seasonal Context': {
+                    'Raw Score': this.formatScore(Ranker.calculateSeasonalContextScore(game)),
+                    'Weight': Ranker.weights.seasonalContext,
+                    'Weighted Score': this.formatScore(Ranker.calculateSeasonalContextScore(game) * Ranker.weights.seasonalContext),
+                    'Description': this.getSeasonalContextDescription(game)
+                }
+            });
+            
+            try {
+                console.groupEnd();
+            } catch (e) {
+                console.log('----- END DETAILED SCORING BREAKDOWN -----');
+            }
+            
+            // Display scoring ranges and star ratings information
+            try {
+                console.group('Star Rating Scale:');
+            } catch (e) {
+                console.log('----- STAR RATING SCALE -----');
+            }
+            
+            console.log('★★★★★ (5 stars): 80-100 points - Elite game');
+            console.log('★★★★ (4 stars): 60-79 points - Great game');
+            console.log('★★★ (3 stars): 40-59 points - Good game');
+            console.log('★★ (2 stars): 20-39 points - Average game');
+            console.log('★ (1 star): 0-19 points - Below average game');
+            
+            try {
+                console.groupEnd();
+            } catch (e) {
+                console.log('----- END STAR RATING SCALE -----');
+            }
+        
+            if (game.playerMilestones) {
+                try {
+                    console.group('Player Milestones:');
+                } catch (e) {
+                    console.log('----- PLAYER MILESTONES -----');
+                }
+                
+                const awayMilestones = game.playerMilestones.away;
+                const homeMilestones = game.playerMilestones.home;
+                
+                if (awayMilestones.noHitter) {
+                    console.log(`🔥 ${game.awayTeam.name} threw a no-hitter!`);
+                    if (awayMilestones.perfectGame) console.log(`🌟 It was a PERFECT GAME!`);
+                }
+                
+                if (homeMilestones.noHitter) {
+                    console.log(`🔥 ${game.homeTeam.name} threw a no-hitter!`);
+                    if (homeMilestones.perfectGame) console.log(`🌟 It was a PERFECT GAME!`);
+                }
+                
+                if (awayMilestones.cycleHitter || homeMilestones.cycleHitter) {
+                    const team = awayMilestones.cycleHitter ? game.awayTeam.name : game.homeTeam.name;
+                    const player = awayMilestones.cycleHitter?.name || homeMilestones.cycleHitter?.name;
+                    console.log(`⚾ ${player} (${team}) hit for the cycle!`);
+                }
+                
+                const multiHRHitters = [...(awayMilestones.multiHomeRunHitters || []), ...(homeMilestones.multiHomeRunHitters || [])];
+                if (multiHRHitters.length > 0) {
+                    multiHRHitters.forEach(player => {
+                        const team = awayMilestones.multiHomeRunHitters.some(p => p.id === player.id) ? 
+                                    game.awayTeam.name : game.homeTeam.name;
+                        console.log(`💪 ${player.name} (${team}) hit ${player.homeRuns} home runs`);
+                    });
+                }
+                
+                const highRBIHitters = [...(awayMilestones.highRbiHitters || []), ...(homeMilestones.highRbiHitters || [])];
+                if (highRBIHitters.length > 0) {
+                    highRBIHitters.forEach(player => {
+                        const team = awayMilestones.highRbiHitters.some(p => p.id === player.id) ? 
+                                    game.awayTeam.name : game.homeTeam.name;
+                        console.log(`👑 ${player.name} (${team}) had ${player.rbi} RBIs`);
+                    });
+                }
+                
+                if (awayMilestones.highStrikeoutPitcher) {
+                    console.log(`🔥 ${awayMilestones.highStrikeoutPitcher.name} (${game.awayTeam.name}) had ${awayMilestones.highStrikeoutPitcher.strikeOuts} strikeouts`);
+                }
+                
+                if (homeMilestones.highStrikeoutPitcher) {
+                    console.log(`🔥 ${homeMilestones.highStrikeoutPitcher.name} (${game.homeTeam.name}) had ${homeMilestones.highStrikeoutPitcher.strikeOuts} strikeouts`);
+                }
+                
+                try {
+                    console.groupEnd();
+                } catch (e) {
+                    console.log('----- END PLAYER MILESTONES -----');
+                }
+            }
+            
+            if (game.awayTeam.detailedRanking && game.homeTeam.detailedRanking) {
+                try {
+                    console.group('Playoff Implications:');
+                } catch (e) {
+                    console.log('----- PLAYOFF IMPLICATIONS -----');
+                }
+                
+                console.log(`${game.awayTeam.name}: ${this.getTeamStandingInfo(game.awayTeam)}`);
+                console.log(`${game.homeTeam.name}: ${this.getTeamStandingInfo(game.homeTeam)}`);
+                
+                // Check for key matchups
+                if (game.awayTeam.detailedRanking.divisionName === game.homeTeam.detailedRanking.divisionName) {
+                    console.log(`📊 Division Matchup: ${game.awayTeam.detailedRanking.divisionName}`);
+                }
+                
+                if (game.awayTeam.detailedRanking.isInFirstPlace && game.homeTeam.detailedRanking.isInFirstPlace) {
+                    console.log(`🏆 First Place Matchup: Division leaders facing off!`);
+                }
+                
+                if (game.awayTeam.detailedRanking.isInWildCard && game.homeTeam.detailedRanking.isInWildCard) {
+                    console.log(`🃏 Wild Card Matchup: Teams in wild card positions!`);
+                }
+                
+                const isLateSeason = new Date(game.date).getMonth() >= 8; // September or later
+                if (isLateSeason) {
+                    console.log(`📅 Late Season Game: September/October matchup with playoff implications`);
+                }
+                
+                try {
+                    console.groupEnd();
+                } catch (e) {
+                    console.log('----- END PLAYOFF IMPLICATIONS -----');
+                }
+            }
+        });
+        
+        console.log('Click on the stars again to hide this breakdown');
+        
+        try {
+            console.groupEnd();
+        } catch (e) {
+            console.log('----- END SCORING BREAKDOWN -----');
+        }
+    }
+    
+    /**
+     * Format scoring value to 2 decimal places
+     * @param {number} value - Score value
+     * @returns {string} - Formatted score value
+     */
+    formatScore(value) {
+        return (value * 100).toFixed(1) + '%';
+    }
+    
+    /**
+     * Get description for close game scoring
+     * @param {number} runDifference - Run difference in game
+     * @returns {string} - Description of close game scoring
+     */
+    getCloseGameDescription(runDifference) {
+        if (runDifference === 0) return 'Tie game';
+        if (runDifference === 1) return '1-run game (very close)';
+        if (runDifference === 2) return '2-run game (close)';
+        if (runDifference === 3) return '3-run game (moderately close)';
+        return `${runDifference}-run difference (not close)`;
+    }
+    
+    /**
+     * Get description for late game drama
+     * @param {Object} game - Game object
+     * @returns {string} - Description of late game drama
+     */
+    getLateDramaDescription(game) {
+        const descriptions = [];
+        
+        if (game.runDifference <= 1 && game.lastLeadChangeInning >= 8) {
+            descriptions.push('Very close late-game lead change');
+        } else if (game.runDifference <= 2 && game.lastLeadChangeInning >= 7) {
+            descriptions.push('Close late-game lead change');
+        }
+        
+        if (game.isWalkoff) {
+            descriptions.push('Walk-off victory');
+        }
+        
+        if (descriptions.length === 0) {
+            return 'No significant late-game drama';
+        }
+        
+        return descriptions.join(', ');
+    }
+    
+    /**
+     * Get description for team rankings
+     * @param {Object} game - Game object
+     * @returns {string} - Description of team rankings
+     */
+    getTeamRankingsDescription(game) {
+        const awayRank = game.awayTeam.ranking?.divisionRank || 5;
+        const homeRank = game.homeTeam.ranking?.divisionRank || 5;
+        
+        return `Away team division rank: ${awayRank}, Home team division rank: ${homeRank}`;
+    }
+    
+    /**
+     * Get description for scoring distribution
+     * @param {Object} game - Game object
+     * @returns {string} - Description of scoring distribution
+     */
+    getScoringDistributionDescription(game) {
+        const inningsWithScoring = game.inningScores.filter(
+            inning => inning.away > 0 || inning.home > 0
+        ).length;
+        
+        const distributionRatio = inningsWithScoring / game.innings;
+        const formattedRatio = (distributionRatio * 100).toFixed(1) + '%';
+        
+        return `Scoring in ${inningsWithScoring} of ${game.innings} innings (${formattedRatio})`;
+    }
+    
+    /**
+     * Get description for player milestones
+     * @param {Object} game - Game object
+     * @returns {string} - Description of player milestones
+     */
+    getPlayerMilestonesDescription(game) {
+        if (!game.playerMilestones) {
+            return 'No milestone data available';
+        }
+        
+        const milestones = [];
+        const awayMilestones = game.playerMilestones.away;
+        const homeMilestones = game.playerMilestones.home;
+        
+        if (awayMilestones.perfectGame || homeMilestones.perfectGame) {
+            milestones.push('Perfect game');
+        } else if (awayMilestones.noHitter || homeMilestones.noHitter) {
+            milestones.push('No-hitter');
+        }
+        
+        if (awayMilestones.cycleHitter || homeMilestones.cycleHitter) {
+            milestones.push('Cycle');
+        }
+        
+        const multiHRHitters = [...(awayMilestones.multiHomeRunHitters || []), ...(homeMilestones.multiHomeRunHitters || [])];
+        if (multiHRHitters.length > 0) {
+            milestones.push(`${multiHRHitters.length} player(s) with multi-HR games`);
+        }
+        
+        const highRBIHitters = [...(awayMilestones.highRbiHitters || []), ...(homeMilestones.highRbiHitters || [])];
+        if (highRBIHitters.length > 0) {
+            milestones.push(`${highRBIHitters.length} player(s) with 5+ RBIs`);
+        }
+        
+        if (awayMilestones.highStrikeoutPitcher || homeMilestones.highStrikeoutPitcher) {
+            milestones.push('10+ strikeout pitching performance');
+        }
+        
+        if (milestones.length === 0) {
+            return 'No notable player milestones';
+        }
+        
+        return milestones.join(', ');
+    }
+    
+    /**
+     * Get description for seasonal context
+     * @param {Object} game - Game object
+     * @returns {string} - Description of seasonal context
+     */
+    getSeasonalContextDescription(game) {
+        if (!game.awayTeam.detailedRanking && !game.homeTeam.detailedRanking) {
+            return 'No detailed rankings available';
+        }
+        
+        const contexts = [];
+        
+        if (game.awayTeam.detailedRanking && game.homeTeam.detailedRanking) {
+            if (game.awayTeam.detailedRanking.divisionName === game.homeTeam.detailedRanking.divisionName) {
+                contexts.push('Division matchup');
+            }
+            
+            if (game.awayTeam.detailedRanking.isInFirstPlace && game.homeTeam.detailedRanking.isInFirstPlace) {
+                contexts.push('First-place teams matchup');
+            }
+            
+            if (game.awayTeam.detailedRanking.isInWildCard && game.homeTeam.detailedRanking.isInWildCard) {
+                contexts.push('Wild card teams matchup');
+            }
+            
+            const isLateSeason = new Date(game.date).getMonth() >= 8; // September or later
+            if (isLateSeason) {
+                contexts.push('Late season game');
+            }
+        }
+        
+        if (contexts.length === 0) {
+            return 'No significant playoff implications';
+        }
+        
+        return contexts.join(', ');
+    }
+
+    /**
+     * Get formatted team standing information
+     * @param {Object} team - Team object
+     * @returns {string} - Formatted standing info
+     */
+    getTeamStandingInfo(team) {
+        if (!team.detailedRanking) return 'No ranking data available';
+        
+        const r = team.detailedRanking;
+        let info = `${r.wins}-${r.losses}`;
+        
+        if (r.isInFirstPlace) {
+            info += `, 1st in ${r.divisionName}`;
+        } else {
+            info += `, ${this.getOrdinal(r.divisionRank)} in ${r.divisionName}, ${r.gamesBack} GB`;
+        }
+        
+        if (r.isInWildCard) {
+            info += `, Wild Card #${r.wildCardRank}`;
+        } else if (r.wildCardGamesBack <= 5) {
+            info += `, ${r.wildCardGamesBack} GB of Wild Card`;
+        }
+        
+        return info;
+    }
+    
+    /**
+     * Get ordinal suffix for a number (1st, 2nd, 3rd, etc.)
+     * @param {number|string} n - The number
+     * @returns {string} - Number with ordinal suffix
+     */
+    getOrdinal(n) {
+        const num = parseInt(n);
+        const j = num % 10;
+        const k = num % 100;
+        
+        if (j === 1 && k !== 11) {
+            return num + "st";
+        }
+        if (j === 2 && k !== 12) {
+            return num + "nd";
+        }
+        if (j === 3 && k !== 13) {
+            return num + "rd";
+        }
+        return num + "th";
     }
 
     /**
