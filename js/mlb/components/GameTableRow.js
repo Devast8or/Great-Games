@@ -66,10 +66,18 @@ class GameTableRow {
         matchupCell.className = 'col-matchup';
         matchupCell.appendChild(this.createMatchupElement());
 
-        const venueCell = document.createElement('td');
-        venueCell.className = 'col-venue';
-        venueCell.textContent = this.game.venue || 'Unknown Venue';
-        venueCell.title = venueCell.textContent;
+        const contextCell = document.createElement('td');
+        contextCell.className = 'col-context';
+
+        if (this.options.showPlayedDate) {
+            contextCell.classList.add('col-played-date');
+            contextCell.textContent = this.getPlayedDateText();
+        } else {
+            contextCell.classList.add('col-venue');
+            contextCell.textContent = this.game.venue || 'Unknown Venue';
+        }
+
+        contextCell.title = contextCell.textContent;
 
         const gameType = this.getGameTypeText();
         const gameTypeCell = document.createElement('td');
@@ -95,7 +103,7 @@ class GameTableRow {
 
         row.appendChild(rankCell);
         row.appendChild(matchupCell);
-        row.appendChild(venueCell);
+        row.appendChild(contextCell);
         row.appendChild(gameTypeCell);
         row.appendChild(ratingCell);
         row.appendChild(statusCell);
@@ -174,7 +182,22 @@ class GameTableRow {
 
         const left = document.createElement('div');
         left.className = 'details-meta';
-        left.textContent = `${this.game.awayTeam.name} @ ${this.game.homeTeam.name}`;
+        const detailsMetaText = `${this.game.awayTeam.name} @ ${this.game.homeTeam.name}`;
+        const detailsSearchUrl = this.getSportsCultSearchUrl();
+
+        if (detailsSearchUrl) {
+            const link = document.createElement('a');
+            link.className = 'details-meta-link';
+            link.href = detailsSearchUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = detailsMetaText;
+            link.title = `Search torrents for ${detailsMetaText}`;
+            left.appendChild(link);
+        } else {
+            left.textContent = detailsMetaText;
+        }
+
         actions.appendChild(left);
 
         const right = document.createElement('div');
@@ -495,8 +518,12 @@ class GameTableRow {
             const homeCell = this.boxScoreState.inningCells.home[inningIndex];
             const awayHalfIndex = inningIndex * 2 + 1;
             const homeHalfIndex = inningIndex * 2 + 2;
-            const awayVisible = revealAll || revealedHalfInnings >= awayHalfIndex;
-            const homeVisible = revealAll || revealedHalfInnings >= homeHalfIndex;
+            const inningNumber = Number(inning?.inningNumber) || inningIndex + 1;
+            const columnVisible = this.shouldShowInningColumn(inningNumber, revealAll, revealedHalfInnings);
+            const awayVisible = columnVisible && (revealAll || revealedHalfInnings >= awayHalfIndex);
+            const homeVisible = columnVisible && (revealAll || revealedHalfInnings >= homeHalfIndex);
+
+            this.setInningColumnVisibility(inningIndex, columnVisible);
 
             this.setInningCellVisibility(awayCell, awayVisible);
             this.setInningCellVisibility(homeCell, homeVisible);
@@ -532,6 +559,34 @@ class GameTableRow {
 
         this.boxScoreState.teamRows.away.classList.toggle('winner', awayRuns > homeRuns);
         this.boxScoreState.teamRows.home.classList.toggle('winner', homeRuns > awayRuns);
+    }
+
+    shouldShowInningColumn(inningNumber, revealAll, revealedHalfInnings) {
+        if (revealAll || inningNumber <= 9) {
+            return true;
+        }
+
+        // Keep extra-inning columns hidden until the previous inning is fully revealed.
+        const previousInningFinalHalf = (inningNumber - 1) * 2;
+        return revealedHalfInnings >= previousInningFinalHalf;
+    }
+
+    setInningColumnVisibility(inningIndex, isVisible) {
+        if (!this.boxScoreState) {
+            return;
+        }
+
+        const headerCell = this.boxScoreState.inningHeaderCells?.[inningIndex] || null;
+        const awayCell = this.boxScoreState.inningCells.away[inningIndex] || null;
+        const homeCell = this.boxScoreState.inningCells.home[inningIndex] || null;
+
+        [headerCell, awayCell, homeCell].forEach((cell) => {
+            if (!cell) {
+                return;
+            }
+
+            cell.classList.toggle('inning-column-hidden', !isVisible);
+        });
     }
 
     setInningCellVisibility(cell, isVisible) {
@@ -620,12 +675,90 @@ class GameTableRow {
         return 'Final';
     }
 
+    getSportsCultSearchUrl() {
+        if (this.options?.isFuture || this.game?.isFuture) {
+            return null;
+        }
+
+        const playedDate = this.getSportsCultSearchDate();
+        const awayTeamName = String(this.game?.awayTeam?.name || '').trim();
+
+        if (!playedDate || !awayTeamName) {
+            return null;
+        }
+
+        const searchText = `MLB ${playedDate} ${awayTeamName}`;
+        const url = new URL('https://sportscult.org/index.php');
+        url.searchParams.set('page', 'torrents');
+        url.searchParams.set('search', searchText);
+        url.searchParams.set('category', '0');
+        url.searchParams.set('active', '1');
+        url.searchParams.set('gold', '0');
+        return url.toString();
+    }
+
+    getSportsCultSearchDate() {
+        const knownDate = String(this.game?.playedDate || this.game?.officialDate || '').trim();
+        const normalizedKnownDate = this.normalizeSearchDate(knownDate);
+
+        if (normalizedKnownDate) {
+            return normalizedKnownDate;
+        }
+
+        const parsedDate = this.game?.date ? new Date(this.game.date) : null;
+        if (parsedDate && !Number.isNaN(parsedDate.getTime())) {
+            const year = String(parsedDate.getUTCFullYear());
+            const month = String(parsedDate.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(parsedDate.getUTCDate()).padStart(2, '0');
+            return `${day} ${month} ${year}`;
+        }
+
+        return null;
+    }
+
+    normalizeSearchDate(value) {
+        if (!value) {
+            return null;
+        }
+
+        const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (isoMatch) {
+            const [, year, month, day] = isoMatch;
+            return `${day} ${month} ${year}`;
+        }
+
+        if (/^\d{2}-\d{2}-\d{4}$/.test(value)) {
+            return value.replace(/-/g, ' ');
+        }
+
+        if (/^\d{2}\s+\d{2}\s+\d{4}$/.test(value)) {
+            return value.trim().replace(/\s+/g, ' ');
+        }
+
+        return null;
+    }
+
+    getPlayedDateText() {
+        const playedDate = String(this.game?.playedDate || this.game?.officialDate || '').trim();
+        if (playedDate) {
+            return playedDate;
+        }
+
+        const parsedDate = this.game?.date ? new Date(this.game.date) : null;
+        if (parsedDate && !Number.isNaN(parsedDate.getTime())) {
+            return parsedDate.toISOString().split('T')[0];
+        }
+
+        return 'Unknown Date';
+    }
+
     renderBoxScore(container) {
         container.innerHTML = '';
 
         const table = document.createElement('table');
         table.className = 'box-score-table';
         const headerRow = document.createElement('tr');
+        const inningHeaderCells = [];
 
         const teamHeaderCell = document.createElement('th');
         teamHeaderCell.className = 'team-header-cell';
@@ -639,6 +772,7 @@ class GameTableRow {
             inningHeaderCell.scope = 'col';
             inningHeaderCell.textContent = String(inning.inningNumber);
             headerRow.appendChild(inningHeaderCell);
+            inningHeaderCells.push(inningHeaderCell);
         });
 
         const runsHeaderCell = document.createElement('th');
@@ -665,6 +799,7 @@ class GameTableRow {
         table.appendChild(headerRow);
 
         const boxScoreState = {
+            inningHeaderCells,
             inningCells: {
                 away: [],
                 home: []
@@ -754,13 +889,6 @@ class GameTableRow {
         this.revealedHalfInnings = 0;
         this.scoreRevealMode = 'hidden';
         this.applyHalfInningReveal();
-
-        if (this.game.isExtraInnings) {
-            const inningsInfo = document.createElement('div');
-            inningsInfo.className = 'innings-info';
-            inningsInfo.textContent = `${this.game.innings} innings`;
-            container.appendChild(inningsInfo);
-        }
     }
 
     getStarRating() {
@@ -863,6 +991,10 @@ class GameTableRow {
 
             if (Array.isArray(highlightItems)) {
                 for (const item of highlightItems) {
+                    if (!this.isPitcherActionHighlight(item)) {
+                        continue;
+                    }
+
                     const imageUrl = this.extractHighlightImageUrl(item);
                     if (!imageUrl) continue;
 
@@ -894,10 +1026,7 @@ class GameTableRow {
     }
 
     extractHighlightPlayerIds(highlightItem) {
-        const keywords = [
-            ...(Array.isArray(highlightItem?.keywordsAll) ? highlightItem.keywordsAll : []),
-            ...(Array.isArray(highlightItem?.keywords) ? highlightItem.keywords : [])
-        ];
+        const keywords = this.extractHighlightKeywords(highlightItem);
 
         const playerIds = new Set();
 
@@ -915,6 +1044,56 @@ class GameTableRow {
         });
 
         return playerIds;
+    }
+
+    extractHighlightKeywords(highlightItem) {
+        return [
+            ...(Array.isArray(highlightItem?.keywordsAll) ? highlightItem.keywordsAll : []),
+            ...(Array.isArray(highlightItem?.keywords) ? highlightItem.keywords : [])
+        ];
+    }
+
+    extractHighlightTaxonomyTags(highlightItem) {
+        const tags = new Set();
+        const keywords = this.extractHighlightKeywords(highlightItem);
+
+        keywords.forEach((keyword) => {
+            if (String(keyword?.type || '').toLowerCase() !== 'taxonomy') {
+                return;
+            }
+
+            const normalizedValue = String(keyword?.value || '').trim().toLowerCase();
+            if (normalizedValue) {
+                tags.add(normalizedValue);
+            }
+        });
+
+        return tags;
+    }
+
+    isPitcherActionHighlight(highlightItem) {
+        const itemType = String(highlightItem?.type || '').trim().toLowerCase();
+        if (itemType && itemType !== 'video') {
+            return false;
+        }
+
+        const taxonomyTags = this.extractHighlightTaxonomyTags(highlightItem);
+        if (!taxonomyTags.size) {
+            return false;
+        }
+
+        if (taxonomyTags.has('data-visualization')) {
+            return false;
+        }
+
+        const hasPitchingTag = taxonomyTags.has('pitching');
+        const hasInGameTag =
+            taxonomyTags.has('in-game-highlight') ||
+            taxonomyTags.has('game-action-tracking') ||
+            taxonomyTags.has('game-story-highlight') ||
+            taxonomyTags.has('highlight');
+
+        return hasPitchingTag && hasInGameTag;
     }
 
     extractHighlightImageUrl(highlightItem) {

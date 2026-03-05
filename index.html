@@ -26,10 +26,73 @@
                         <input type="date" id="game-date">
                     </div>
 
-                    <button id="toggle-filters" class="settings-inline-btn" aria-label="Open ranking criteria settings" aria-haspopup="dialog" aria-controls="filters-modal" aria-expanded="false">
-                        <span class="settings-inline-label">Ranking</span>
-                        <span class="settings-inline-icon" aria-hidden="true">⚙</span>
-                    </button>
+                    <div class="table-toolbar-actions">
+                        <button id="open-period-filter" class="settings-inline-btn" aria-label="Open game range filter" aria-haspopup="dialog" aria-controls="period-filter-modal" aria-expanded="false">
+                            <span class="settings-inline-label">Filter</span>
+                            <span class="settings-inline-icon" aria-hidden="true">F</span>
+                        </button>
+
+                        <button id="toggle-filters" class="settings-inline-btn" aria-label="Open ranking criteria settings" aria-haspopup="dialog" aria-controls="filters-modal" aria-expanded="false">
+                            <span class="settings-inline-label">Ranking</span>
+                            <span class="settings-inline-icon" aria-hidden="true">⚙</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="active-period-filter" class="active-filter-badge hidden" role="status" aria-live="polite">
+                    <span id="active-period-filter-text"></span>
+                    <button id="clear-period-filter" class="active-filter-badge-clear" type="button" aria-label="Remove active game filter">Remove</button>
+                </div>
+
+                <div id="period-filter-modal" class="filters-modal hidden" role="dialog" aria-modal="true" aria-labelledby="period-filter-modal-title">
+                    <div class="filters-modal-panel panel-surface period-filter-modal-panel">
+                        <div class="filters-modal-header">
+                            <h3 id="period-filter-modal-title">Filter Games</h3>
+                            <button id="close-period-filter-modal" class="filters-modal-close" aria-label="Close game filter settings">&times;</button>
+                        </div>
+
+                        <div class="period-filter-content">
+                            <div class="period-filter-field">
+                                <label for="filter-lookback-days">Lookback Days</label>
+                                <div class="period-filter-number-wrap">
+                                    <input type="number" id="filter-lookback-days" min="1" max="120" step="1" value="7" inputmode="numeric">
+                                    <div class="period-filter-stepper" aria-label="Adjust lookback days">
+                                        <button id="filter-days-increase" class="period-filter-step-btn" type="button" aria-label="Increase lookback days">+</button>
+                                        <button id="filter-days-decrease" class="period-filter-step-btn" type="button" aria-label="Decrease lookback days">-</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="period-filter-field">
+                                <label for="filter-team">Team</label>
+                                <div id="period-filter-team-picker" class="period-filter-team-picker">
+                                    <button id="filter-team-toggle" class="period-filter-team-toggle" type="button" aria-expanded="false" aria-controls="filter-team-options" aria-describedby="filter-team-help">All Teams</button>
+                                    <div id="filter-team-options" class="period-filter-team-options hidden" role="group" aria-label="Team options"></div>
+                                </div>
+                                <select id="filter-team" multiple class="period-filter-team-native hidden" aria-hidden="true" tabindex="-1">
+                                    <option value="all">All Teams</option>
+                                </select>
+                                <p id="filter-team-help" class="period-filter-select-help">Expand the list and select one or several teams.</p>
+                            </div>
+
+                            <div class="period-filter-field">
+                                <label for="filter-min-stars">Minimum Stars</label>
+                                <select id="filter-min-stars">
+                                    <option value="1">★</option>
+                                    <option value="2">★★</option>
+                                    <option value="3">★★★</option>
+                                    <option value="4">★★★★</option>
+                                    <option value="5">★★★★★</option>
+                                </select>
+                            </div>
+
+                            <p class="period-filter-hint">Applies to completed games from the selected game date and looks back the number of days entered.</p>
+
+                            <div class="period-filter-actions">
+                                <button id="apply-period-filter" class="period-filter-apply-btn" type="button">Apply</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="filters-modal" class="filters-modal hidden" role="dialog" aria-modal="true" aria-labelledby="filters-modal-title">

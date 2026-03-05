@@ -72,6 +72,13 @@ export const API = {
         });
     },
 
+    async fetchTeams(season = new Date().getFullYear()) {
+        return this.apiRequest('/teams', {
+            sportId: '1',
+            season
+        });
+    },
+
     async fetchStandings(date) {
         return this.apiRequest('/standings', {
             leagueId: '103,104',
