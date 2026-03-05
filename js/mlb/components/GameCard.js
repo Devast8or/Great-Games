@@ -1082,10 +1082,8 @@ class GameCard {
      */
     formatPitcherStats(stats) {
         if (!stats) return 'Not Avaliable';
-        
-        const winLossText = (Number(stats.wins) > 0 || Number(stats.losses) > 0) ? 
-            `, ${stats.wins}-${stats.losses}` : '';
-        return `${stats.gamesPlayed} G, ${stats.era} ERA${winLossText}`;
+
+        return `${stats.gamesPlayed} G, ${stats.era} ERA`;
     }
 
     /**
