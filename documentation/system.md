@@ -1,430 +1,332 @@
-# MLB Great Games - System Documentation
+# MLB Great Games — System Documentation (Current)
 
-This document provides comprehensive documentation for all files, functions, and classes in the MLB Great Games application.
+This document describes the current implementation on branch `additionalStats`, including the table-first UI, ranking settings modal, and themed details panels.
 
-## Table of Contents
+## 1. Project Overview
 
-1. [Project Overview](#project-overview)
-2. [File Structure](#file-structure)
-3. [Core Components](#core-components)
-   - [App Module](#app-module)
-   - [UI Module](#ui-module)
-   - [API Module](#api-module)
-   - [Parser Module](#parser-module)
-   - [Ranker Module](#ranker-module)
-   - [Utils Module](#utils-module)
-4. [Component Modules](#component-modules)
-   - [GameCard](#gamecard-component)
-   - [LineupDisplay](#lineupdisplay-component)
-   - [PitcherDisplay](#pitcherdisplay-component)
-   - [PlayerDetailPanel](#playerdetailpanel-component)
-5. [Cache Module](#cache-module)
-6. [Assets](#assets)
-7. [CSS Styling](#css-styling)
-8. [HTML Structure](#html-structure)
+MLB Great Games is a spoiler-aware frontend app for MLB game discovery. It:
 
-## Project Overview
+- fetches games and standings from the MLB Stats API,
+- ranks games by configurable excitement criteria,
+- renders games in a compact table,
+- supports drill-down details (lineups, pitchers, score reveal) without leaving the page.
 
-MLB Great Games is a web application that allows users to discover and watch MLB games without spoilers. The application fetches game data from the MLB Stats API and presents it in an organized, spoiler-free way. It includes features such as game discovery with custom filters, spoiler protection, team information, and lineup displays.
+## 2. Current Interaction Model
 
-## File Structure
+### Primary Page Flow
 
-```
+1. App loads and auto-selects yesterday's date.
+2. Games auto-load immediately.
+3. User can change date (auto-reload happens on date change).
+4. User can open `Ranking ⚙` modal to toggle ranking criteria.
+5. User expands table rows for details and optionally reveals score.
+
+### Table Behavior
+
+- Columns: `#`, `Matchup`, `Venue`, `Type`, `Rating`, `Status`, `Details`.
+- Row click/keyboard toggles details expansion.
+- Only one details row is expanded at a time.
+- Status values are normalized to:
+  - `Final`
+  - `In Progress`
+  - scheduled first-pitch time (scheduled/preview rows)
+- Day boundaries for table date selection follow MLB schedule timezone semantics (`America/New_York`) rather than browser-local midnight.
+- Upcoming-day views include `Preview`, `Scheduled`, and `Live` games.
+- Status-column heading is conditional:
+  - `First pitch @` when all displayed rows are scheduled/preview
+  - `Status` when any row is live or final
+- `Type` is derived from schedule `gameType` with user-friendly labels, and uses `seriesDescription`/`description` metadata to disambiguate special-event `F` games (for example, World Baseball Classic).
+- CET subline rendering in status was tested and then removed; table status is currently single-line.
+- In expanded details, pitcher cards attempt to show pitcher-linked highlight/action images; fallback uses a local unknown-player headshot asset when pitcher data/image is unavailable.
+
+### Ranking Settings Modal
+
+- Opened by right-aligned `Ranking ⚙` button beside date selector.
+- Centered overlay modal.
+- Modal node is reparented to `document.body` during init to keep viewport-fixed positioning stable when table rows expand.
+- Ranking criteria toggle state is persisted in browser `localStorage` and restored during UI initialization.
+- Closes via:
+  - close (`×`) button,
+  - backdrop click,
+  - `Escape` key.
+
+## 3. Source Structure
+
+```text
 Great Games/
+├── index.html
+├── readme.md
+├── documentation/
+│   └── system.md
+├── css/
+│   ├── styles.css
+│   └── responsive.css
 ├── assets/
 │   └── mlb/
+│       ├── hero/
 │       ├── mlb_rivals.json
-│       └── mlb_rivals.png
-├── css/
-│   ├── styles.css        # Main styles
-│   └── responsive.css    # Responsive design
-├── documentation/
-│   └── system.md         # This documentation file
-├── js/
-│   ├── api.js            # API interactions
-│   ├── app.js            # Application entry point
-│   ├── cache.js          # Caching functionality
-│   ├── parser.js         # Data processing
-│   ├── ranker.js         # Game ranking logic
-│   ├── test-api.js       # Test functions for API
-│   ├── ui.js             # UI handling
-│   ├── utils.js          # Utility functions
-│   └── components/
-│       ├── GameCard.js           # Game card UI component
-│       ├── LineupDisplay.js      # Lineup display component
-│       ├── PitcherDisplay.js     # Pitcher display component
-│       └── PlayerDetailPanel.js  # Player details panel
-├── index.html            # Main HTML
-└── readme.md             # Project readme
+│       └── unknown-player-headshot.png
+└── js/
+    └── mlb/
+        ├── app.js
+        ├── ui.js
+        ├── api.js
+        ├── parser.js
+        ├── ranker.js
+        ├── cache.js
+        ├── utils.js
+        ├── test-api.js
+        └── components/
+            ├── GameTableRow.js
+            ├── GameCard.js (legacy)
+            ├── LineupDisplay.js
+            ├── PitcherDisplay.js
+            ├── PlayerDetailPanel.js
+            └── PitcherDetailPanel.js
 ```
 
-## Core Components
+## 4. Core Modules
 
-### App Module
+### App Module — `js/mlb/app.js`
 
-**File:** `js/app.js`
+Responsibilities:
 
-Main application entry point that initializes the application when the DOM is loaded.
+- Initializes UI on `DOMContentLoaded`.
+- Wires global `unhandledrejection` handler for `APIError` display.
 
-**Functions:**
-- `DOMContentLoaded` event listener
-  - **Input:** DOM content loaded event
-  - **Output:** None, initializes the UI and sets up error handling
+### UI Module — `js/mlb/ui.js`
 
-### UI Module
+Responsibilities:
 
-**File:** `js/ui.js`
+- Controls date selection, loading states, errors, and no-games view.
+- Auto-loads games on startup and on date change.
+- Opens/closes ranking modal.
+- Persists ranking criteria selections (`mlb-ranking-options`) and reapplies saved values on load.
+- Renders ranked/scheduled games in table form via `GameTableRow`.
 
-Handles all DOM interactions, creates game cards, and manages the user interface state.
+Key methods:
 
-**Class:** `UI`
+- `init()`
+- `handleLoadGames()`
+- `loadCompletedGames(date)`
+- `loadFutureGames(date)`
+- `displayGames()`
+- `refreshGameRankings()`
+- `loadRankingOptionsFromStorage()`
+- `saveRankingOptionsToStorage()`
+- `toggleFiltersPanel(forceOpen)`
 
-**Constructor:**
-- **Input:** None
-- **Output:** UI instance with initialized DOM elements, game data, and state variables
+### API Module — `js/mlb/api.js`
 
-**Methods:**
+Responsibilities:
 
-| Method | Description | Input | Output |
-|--------|-------------|-------|--------|
-| `init()` | Initializes UI elements and event handlers, sets up date picker with yesterday's date, and attaches event listeners | None | None |
-| `formatDate(date)` | Formats a JavaScript Date object as YYYY-MM-DD string | `date` - JavaScript Date object | String formatted as YYYY-MM-DD |
-| `handleLoadGames()` | Handles user click on load games button, validates date and loads appropriate games | None | None |
-| `loadCompletedGames(date)` | Fetches and processes completed games for a specific date | `date` - String date in YYYY-MM-DD format | None |
-| `loadFutureGames(date)` | Fetches and processes future games for a specific date | `date` - String date in YYYY-MM-DD format | None |
-| `displayGames()` | Renders game cards in the DOM based on loaded games and ranking options | None | None |
-| `getRankingOptions()` | Gets current filter settings from UI checkboxes | None | Object containing filter settings |
-| `refreshGameRankings()` | Re-ranks and displays games based on current filter settings | None | None |
-| `showLoading()` | Shows loading indicator and hides other UI elements | None | None |
-| `hideLoading()` | Hides the loading indicator | None | None |
-| `showError(message)` | Displays an error message to the user | `message` - String error message | None |
-| `showNoGames()` | Shows a message indicating no games were found for the selected date | None | None |
-| `toggleFiltersPanel()` | Toggles visibility of the filters panel and saves state to localStorage | None | None |
-
-### API Module
-
-**File:** `js/mlb/api.js`
-
-Handles all interactions with the MLB Stats API, includes caching functionality.
+- MLB API communication.
+- Fetching schedules, standings, lineups, pitchers, and game details.
+- Schedule requests include MLB + International Baseball (`sportId: '1,51'`) and are timezone-scoped with `timeZone=America/New_York` so date buckets align with MLB.com schedule-day behavior.
+- Team logo URL generation.
+- Error wrapping via `APIError`.
 
-**Class:** `APIError` (extends Error)
+### Parser Module — `js/mlb/parser.js`
 
-**Constructor:**
-- **Input:** 
-  - `message` - String error message
-  - `status` - Number HTTP status code
-  - `endpoint` - String API endpoint that failed
-- **Output:** APIError instance
-
-**Object:** `API`
+Responsibilities:
 
-**Properties:**
-- `BASE_URL` - Base URL for the MLB Stats API
-- `cache` - Instance of APICache for caching responses
+- Converts raw API payloads into normalized game objects.
+- Builds completed-game and future-game models.
+- Uses timezone-scoped schedule bucket day (`dates[].date`) for completed-game day filtering.
+- Includes live games in upcoming-day parsing (`Preview`, `Scheduled`, `Live`).
+- Preserves `gameType` for completed and future games to support correct stats split queries.
+- Preserves schedule series metadata (`seriesDescription`, `seriesGameNumber`, `description`) for table label accuracy.
+- Derives pre-game team records for completed games from post-game schedule `leagueRecord` values to keep matchup rows spoiler-safe.
+- Computes helper values (lead changes, innings data, etc.) used by ranking.
 
-**Methods:**
+### Ranker Module — `js/mlb/ranker.js`
 
-| Method | Description | Input | Output |
-|--------|-------------|-------|--------|
-| `apiRequest(endpoint, params)` | Makes an API request with error handling and caching | `endpoint` - String API endpoint path<br>`params` - Object with query parameters (optional) | Promise resolving to API response data |
-| `fetchGames(date)` | Fetches schedule data including games for a specific date | `date` - String date in YYYY-MM-DD format | Promise resolving to games data |
-| `fetchStandings(date)` | Fetches team standings for a specific date | `date` - String date in YYYY-MM-DD format | Promise resolving to standings data |
-| `processTeamRankings(standingsData)` | Processes raw standings data into a team rankings object | `standingsData` - Object with standings API response | Object mapping team IDs to ranking information |
-| `fetchGameStats(gameId)` | Fetches detailed box score statistics for a game | `gameId` - Number game identifier | Promise resolving to detailed game statistics |
-| `fetchStartingPitchers(gameId)` | Fetches and processes starting pitchers for a game | `gameId` - Number game identifier | Promise resolving to starting pitchers information |
-| `extractStartingPitchers(boxscore)` | Extracts starting pitcher information from boxscore data | `boxscore` - Object with boxscore API response | Object with home and away starting pitcher information |
-| `getTeamLogoUrl(teamId)` | Constructs the URL for a team's logo | `teamId` - Number team identifier | String URL for the team's logo |
-| `fetchStartingLineups(gameId)` | Fetches and processes starting lineups for a game | `gameId` - Number game identifier | Promise resolving to starting lineups information |
-| `extractStartingLineups(boxscore)` | Extracts lineup information from boxscore data | `boxscore` - Object with boxscore API response | Object with home and away lineup information |
-| `fetchTeamPitchers(teamId)` | Fetches all starting pitchers for a team with complete stats | `teamId` - Number team identifier | Promise resolving to array of pitcher objects with stats |
+Responsibilities:
 
-### Parser Module
+- Scores games using weighted criteria.
+- Re-sorts games when user toggles ranking criteria.
 
-**File:** `js/parser.js`
+Criteria keys currently used by UI:
 
-Processes raw game data into a standardized format for use in the application.
+- `closeGames`
+- `leadChanges`
+- `comebackWins`
+- `lateGameDrama`
+- `extraInnings`
+- `highScoring`
+- `teamRankings`
+- `hits`
+- `errors`
+- `scoringDistribution`
+- `rivalryGame`
+- `playerMilestones`
+- `seasonalContext`
 
-**Class:** `Parser`
+### Cache Module — `js/mlb/cache.js`
 
-**Static Methods:**
-
-| Method | Description | Input | Output |
-|--------|-------------|-------|--------|
-| `processGames(apiData)` | Processes API schedule data into standardized game objects | `apiData` - Object with games API response | Array of processed game objects |
-| `processGameData(game)` | Transforms a raw game object into structured format with calculated properties | `game` - Object with raw game data | Object with processed game data |
-| `extractPitcher(pitcher)` | Extracts basic pitcher information from API data | `pitcher` - Object with raw pitcher data | Object with processed pitcher information or null |
-| `countLeadChanges(innings, awayTeamId, homeTeamId)` | Analyzes innings data to count how many times the lead changed hands | `innings` - Array of inning data<br>`awayTeamId` - Number away team identifier<br>`homeTeamId` - Number home team identifier | Number of lead changes in the game |
-| `processFutureGames(apiData)` | Processes API data for upcoming games | `apiData` - Object with games API response | Array of processed future game objects |
-| `processFutureGame(game)` | Transforms a raw future game object into structured format | `game` - Object with raw future game data | Object with processed future game data |
-| `extractFuturePitcher(pitcher)` | Extracts basic pitcher information for future games | `pitcher` - Object with raw future pitcher data | Object with processed future pitcher information or null |
-| `findLastLeadChangeInning(gameData)` | Determines which inning had the final lead change of the game | `gameData` - Object with raw game data | Number representing inning of last lead change |
-| `isWalkoffGame(gameData)` | Determines if game ended with a walk-off win in the bottom of the last inning | `gameData` - Object with raw game data | Boolean indicating if game ended in a walk-off |
-| `findMaximumLeadAndComeback(innings, awayTeamId, homeTeamId, finalAwayScore, finalHomeScore)` | Finds the maximum lead in a game and determines if there was a comeback victory | `innings` - Array of inning data<br>`awayTeamId` - Number away team ID<br>`homeTeamId` - Number home team ID<br>`finalAwayScore` - Number final away score<br>`finalHomeScore` - Number final home score | Object with `maxLead` and `comebackTeamId` indicating if/which team made a comeback |
-
-### Ranker Module
-
-**File:** `js/ranker.js`
-
-Scores and ranks MLB games based on excitement factors.
-
-**Class:** `Ranker`
-
-**Static Properties:**
-- `weights` - Object with scoring weights for different factors:
-  - `closeGame`: 20 - Games with small run differences
-  - `leadChanges`: 15 - Number and timing of lead changes
-  - `lateGameDrama`: 20 - Close games in final innings, late lead changes, walk-offs
-  - `comebackWin`: 10 - Teams overcoming significant deficits to win
-  - `extraInnings`: 10 - Games that go beyond 9 innings
-  - `highScoring`: 10 - Total runs scored with bonuses for balanced high-scoring games
-  - `teamRankings`: 5 - Games between highly ranked teams
-  - `hits`: 5 - Total hits in the game
-  - `errors`: 5 - Errors that add drama
-
-**Static Methods:**
-
-| Method | Description | Input | Output |
-|--------|-------------|-------|--------|
-| `rankGames(games, options)` | Ranks games based on excitement factors and returns sorted array | `games` - Array of processed game objects<br>`options` - Object with ranking options/weights | Array of games ranked by excitement score |
-| `calculateGameScore(game, options)` | Calculates total excitement score for a game based on all factors | `game` - Object with game data<br>`options` - Object with scoring options | Number representing excitement score (0-100) |
-| `calculateCloseGameScore(game)` | Calculates score component based on run difference | `game` - Object with game data | Number representing score multiplier (0-1) |
-| `calculateLeadChangesScore(game)` | Calculates score component based on number and timing of lead changes | `game` - Object with game data | Number representing score multiplier (0-1) |
-| `calculateLateGameDramaScore(game)` | Calculates score component based on late-game action and drama | `game` - Object with game data | Number representing score multiplier (0-1) |
-| `calculateExtraInningsScore(game)` | Calculates score component based on extra innings played | `game` - Object with game data | Number representing score multiplier (0-1) |
-| `calculateHighScoringScore(game)` | Calculates score component based on total runs scored | `game` - Object with game data | Number representing score multiplier (0-1) |
-| `calculateRankingsScore(game)` | Calculates score component based on team division rankings | `game` - Object with game data | Number representing score multiplier (0-1) |
-| `calculateHitsScore(game)` | Calculates score component based on total hits in the game | `game` - Object with game data | Number representing score multiplier (0-1) |
-| `calculateErrorsScore(game)` | Calculates score component based on errors adding to game drama | `game` - Object with game data | Number representing score multiplier (0-1) |
-| `calculateComebackScore(game)` | Calculates score component based on comeback wins, where a team overcomes a 3+ run deficit | `game` - Object with game data | Number representing score multiplier (0-1) |
-| `scoreToStars(score)` | Converts numeric excitement score to star rating for display | `score` - Number score (0-100) | Number star rating (1-5) |
-| `getStarSymbols(starRating)` | Generates star symbols (★ and ½) for visual display | `starRating` - Number star rating (1-5) | String of star symbols |
+Responsibilities:
 
-### Utils Module
-
-**File:** `js/utils.js`
-
-Utility functions used throughout the application.
-
-**Object:** `Utils`
-
-**Methods:**
-
-| Method | Description | Input | Output |
-|--------|-------------|-------|--------|
-| `getPlayerName(player)` | Gets player's full name from different API response formats | `player` - Object with player data from API | String containing player's full name |
-| `processPlayerStats(stats, type)` | Processes player stats with default values to handle missing data | `stats` - Object with raw stats<br>`type` - String ('batting' or 'pitching') | Object with processed stats and default values |
-| `formatDivisionName(divisionName)` | Formats a division name to be more concise (e.g. "American League East" to "AL East") | `divisionName` - String full division name | String formatted division name (shortened) |
-| `createCacheKey(endpoint, params)` | Creates a unique cache key for storing API responses | `endpoint` - String API endpoint<br>`params` - Object with request parameters | String cache key |
-| `getInningString(inning)` | Formats inning number with proper suffix (1st, 2nd, 3rd, etc.) | `inning` - Number inning number | String formatted inning with suffix |
+- In-memory API response caching with expiration.
+- Helper retrieval/write and stale cleanup operations.
 
-## Component Modules
+### Utils Module — `js/mlb/utils.js`
 
-### GameCard Component
+Responsibilities:
 
-**File:** `js/components/GameCard.js`
+- Shared formatting and extraction helpers (player names, stats normalization, inning labels, cache key helpers).
 
-Component for displaying game information in a card format.
+## 5. Component Modules
 
-**Class:** `GameCard`
+### GameTableRow — `js/mlb/components/GameTableRow.js`
 
-**Constructor:**
-- `constructor(game, options)`
-  - **Input:**
-    - `game` - Object containing game data
-    - `options` - Object with optional configuration (optional)
-  - **Output:** GameCard instance
+Primary table-row renderer.
 
-**Methods:**
+Responsibilities:
 
-| Method | Description | Input | Output |
-|--------|-------------|-------|--------|
-| `render()` | Creates and returns the game card DOM element from template | None | HTMLElement - Game card DOM element |
-| `renderTeams()` | Adds team logos, names and rankings to the card | None | None, updates the DOM with team information |
-| `renderDivisionInfo(teamType)` | Adds division ranking information for a specific team | `teamType` - String ('away' or 'home') | None, updates the DOM with division information |
-| `renderGameInfo()` | Adds game information including stadium, score, and game time for future games | None | None, updates the DOM with game information |
-| `renderBoxScore(container)` | Creates the box score table with innings and runs/hits/errors | `container` - HTMLElement to contain the box score | None, updates the container with box score table |
-| `renderRating()` | Adds star rating based on game excitement score | None | None, updates the DOM with game rating |
-| `getStarRating()` | Calculates and formats star rating from excitement score | None | String representing star rating HTML |
-| `createVsSection()` | Creates the VS section with reveal score button | None | None, creates VS section with reveal button |
-| `loadPitcherStats(pitcher)` | Fetches and attaches stats to a pitcher object | `pitcher` - Object with pitcher data | Promise resolving to pitcher object with stats |
-| `setupLineups()` | Creates the expandable lineups section with toggle button | None | None, sets up lineup section in the DOM |
-| `toggleLineups(button, container)` | Handles showing/hiding the lineups section and loading data | `button` - HTMLElement button that was clicked<br>`container` - HTMLElement container to show/hide | None, toggles visibility of lineups |
-| `loadAndRenderPitchers(container)` | Loads pitcher data from API and renders pitcher displays | `container` - HTMLElement containing pitcher displays | Promise resolving when pitchers are loaded and rendered |
-| `loadAndRenderLineups(container)` | Loads lineup data from API and renders lineup displays | `container` - HTMLElement containing lineup displays | Promise resolving when lineups are loaded and rendered |
-| `createPitcherDisplay(pitcher, teamType)` | Generates HTML for a pitcher's display panel | `pitcher` - Object with pitcher data<br>`teamType` - String ('away' or 'home') | String HTML for pitcher display |
-| `formatPitcherStats(stats)` | Formats pitcher statistics for readable display | `stats` - Object with pitcher stats | String formatted stats for display |
-| `update(newData)` | Updates the game card with new data and re-renders | `newData` - Object with updated game data | None, updates the game card DOM element |
+- Renders summary row and hidden details row.
+- Renders the ranking-row `Type` column using friendly `gameType` labels with WBC-aware disambiguation.
+- Handles row expansion/collapse (single-open behavior).
+- Handles score reveal toggle.
+- Loads and renders lineups + pitchers on demand.
+- Fetches pitcher season stats using the selected game's season year and game type.
+- Resolves pitcher-linked highlight images from `game/{gamePk}/content` and passes them to expanded-row pitcher cards.
+- Normalizes status display (`Final`, `In Progress`, time).
 
-### LineupDisplay Component
+### LineupDisplay — `js/mlb/components/LineupDisplay.js`
 
-**File:** `js/components/LineupDisplay.js`
+Responsibilities:
 
-Component for showing team lineups.
+- Renders lineup table with player rows.
+- Computes/marks hot performer.
+- Opens player detail panel for selected player.
 
-**Class:** `LineupDisplay`
+### PitcherDisplay — `js/mlb/components/PitcherDisplay.js`
 
-**Constructor:**
-- `constructor(teamType, lineup)`
-  - **Input:**
-    - `teamType` - String ('away' or 'home')
-    - `lineup` - Array of player objects (optional)
-  - **Output:** LineupDisplay instance
+Responsibilities:
 
-**Methods:**
+- Renders pitcher summary cards.
+- Supports optional `displayImageUrl` for expanded-row highlight/action photos with headshot fallback.
+- Opens pitcher detail panel.
 
-| Method | Description | Input | Output |
-|--------|-------------|-------|--------|
-| `render()` | Creates and returns the lineup display element | None | HTMLElement - Lineup display element |
-| `createLineupTable()` | Builds an HTML table containing all players in the lineup with stats | None | HTMLElement - Table element with lineup data |
-| `showPlayerDetails(player)` | Opens a detail panel showing comprehensive player information | `player` - Object with player data | None, shows player details panel |
-| `update(newLineup)` | Updates the lineup with new player data and re-renders | `newLineup` - Array of new lineup data | None, updates the lineup display |
-| `showLoading()` | Displays a loading indicator while lineup data is being fetched | None | None, shows loading state in the lineup display |
-| `showError(message)` | Shows an error message if lineup data loading fails | `message` - String error message (default: 'Error loading lineup') | None, shows error state in the lineup display |
+### PlayerDetailPanel — `js/mlb/components/PlayerDetailPanel.js`
 
-### PitcherDisplay Component
+Responsibilities:
 
-**File:** `js/mlb/components/PitcherDisplay.js`
+- Side panel with detailed batter stats.
+- Team-side aware panel behavior (`away`/`home`).
+- Uses idempotent close lifecycle with timeout/listener cleanup to avoid race-condition null-removal errors.
 
-Component for showing pitcher information.
+### PitcherDetailPanel — `js/mlb/components/PitcherDetailPanel.js`
 
-**Class:** `PitcherDisplay`
+Responsibilities:
 
-**Constructor:**
-- `constructor(pitcher, teamType)`
-  - **Input:**
-    - `pitcher` - Object with pitcher data
-    - `teamType` - String ('away' or 'home')
-  - **Output:** PitcherDisplay instance
+- Side panel with detailed pitcher stats.
+- Keeps panel hero image source as MLB headshot URL (unchanged behavior).
+- Uses null-safe stat rendering defaults to prevent missing-stat runtime errors.
+- Fetches and displays team pitcher rankings table.
+- Team pitcher rankings are fetched with season-year + game-type context from the selected game.
 
-**Methods:**
+### GameCard (Legacy) — `js/mlb/components/GameCard.js`
 
-| Method | Description | Input | Output |
-|--------|-------------|-------|--------|
-| `render()` | Creates and returns the pitcher display element with image and stats | None | HTMLElement - Pitcher display element |
-| `showPitcherDetails()` | Opens the detail panel with comprehensive pitcher statistics | None | None, shows the pitcher detail panel |
-| `formatStats()` | Formats pitcher statistics into a readable string for display | None | String formatted stats for display |
-| `update(newPitcher)` | Updates the pitcher display with new data and re-renders | `newPitcher` - Object with updated pitcher data | None, updates the pitcher display |
+- Retained in repository for historical/card UI path.
+- Current primary rendering path uses `GameTableRow`.
 
-### PitcherDetailPanel Component
+## 6. HTML Structure (Current)
 
-**File:** `js/mlb/components/PitcherDetailPanel.js`
+`index.html` key regions:
 
-Component for showing detailed pitcher information and team pitcher rankings in a sliding panel.
+- app header/branding,
+- main content rail,
+- table toolbar (date selector + right-aligned ranking trigger),
+- centered ranking modal container,
+- loading/error/empty states,
+- games table mount point (`#games-list`),
+- footer.
 
-**Class:** `PitcherDetailPanel`
+## 7. Styling Architecture
 
-**Constructor:**
-- `constructor(teamType)`
-  - **Input:** `teamType` - String ('away' or 'home')
-  - **Output:** PitcherDetailPanel instance
+### Main Styles — `css/styles.css`
 
-**Methods:**
+Contains:
 
-| Method | Description | Input | Output |
-|--------|-------------|-------|--------|
-| `show(pitcher, onClose)` | Opens the panel with detailed pitcher information and stats | `pitcher` - Object with pitcher data<br>`onClose` - Function callback when panel is closed | None, shows the panel with pitcher details |
-| `create(pitcher)` | Creates the panel DOM element and adds it to the page | `pitcher` - Object with pitcher data | None, creates the panel element |
-| `updateContent(pitcher)` | Updates the panel content when showing a different pitcher | `pitcher` - Object with new pitcher data | None, updates panel with new pitcher data |
-| `updatePanelContent(panel, pitcher)` | Updates the HTML content with pitcher stats and rankings | `panel` - HTMLElement panel to update<br>`pitcher` - Object with pitcher data | None, updates panel content |
-| `close()` | Closes the panel with animation and cleanup | None | None, closes the panel |
-| `isShowingPitcher(pitcher)` | Checks if the panel is currently showing a specific pitcher | `pitcher` - Object with pitcher data | Boolean - True if panel is showing this pitcher |
-| `fetchTeamPitcherRankings(teamId)` | Fetches and ranks all starting pitchers from the team by ERA | `teamId` - Number team ID | Promise<Array> - Promise resolving to sorted array of pitchers |
+- base theme variables and surfaces,
+- table UI styles,
+- ranking modal styles,
+- details row/lineup/pitcher styling,
+- player/pitcher side panel styling,
+- final-pass override sections used to ensure new theme behavior wins over legacy blocks.
 
-### PlayerDetailPanel Component
+### Responsive Styles — `css/responsive.css`
 
-**File:** `js/components/PlayerDetailPanel.js`
+Contains breakpoint behavior for:
 
-Component for showing detailed player information in a sliding panel.
+- table layout and column visibility,
+- details row spacing,
+- ranking modal sizing/stacking,
+- small-screen behavior.
 
-**Class:** `PlayerDetailPanel`
+## 8. Runtime Data Flow
 
-**Constructor:**
-- `constructor(teamType)`
-  - **Input:** `teamType` - String ('away' or 'home')
-  - **Output:** PlayerDetailPanel instance
+1. `UI.init()` selects date, restores saved ranking options, and triggers load.
+2. `UI.handleLoadGames()` decides completed vs future branch.
+3. `API` fetches schedule + standings.
+4. `Parser` normalizes game objects.
+5. `Ranker` scores completed games based on active criteria.
+6. `UI.displayGames()` renders table rows via `GameTableRow`.
+7. Row expansion triggers async lineup/pitcher loading and nested detail panel interactions.
 
-**Methods:**
+## 9. Maintenance Notes
 
-| Method | Description | Input | Output |
-|--------|-------------|-------|--------|
-| `show(player, onClose)` | Opens the panel with detailed player information | `player` - Object with player data<br>`onClose` - Function callback when panel is closed | None, shows the panel with player details |
-| `create(player)` | Creates the panel DOM element and adds it to the page | `player` - Object with player data | None, creates the panel element |
-| `updateContent(player)` | Updates the panel content when showing a different player | `player` - Object with new player data | None, updates panel with new player data |
-| `updatePanelContent(panel, player)` | Updates the HTML content of the panel with player data | `panel` - HTMLElement panel to update<br>`player` - Object with player data | None, updates panel content with player data |
-| `close()` | Closes the panel with animation and cleanup | None | None, closes the panel |
-| `isShowingPlayer(player)` | Checks if the panel is currently showing a specific player | `player` - Object with player data | Boolean - True if panel is showing this player |
+- `styles.css` currently contains historical and newer style layers. Keep new behavior in final-pass scoped sections unless a full stylesheet cleanup is planned.
+- If styling appears inconsistent, check cascade order near end-of-file override sections first.
+- `GameCard` remains legacy; avoid wiring it back into `ui.js` unless intentionally restoring card view.
 
-## Cache Module
+## 10. Recent Changes (2026-03-04)
 
-**File:** `js/cache.js`
+This section captures all updates implemented in this chat.
 
-Provides caching functionality for API responses.
+Detailed daily log: [changes-2026-03-04.md](changes-2026-03-04.md)
+Reusable template: [changes-template.md](changes-template.md)
 
-**Class:** `APICache`
+### UI / Styling / Layout
 
-**Constructor:**
-- `constructor()`
-  - **Input:** None
-  - **Output:** APICache instance with 5-minute default expiration time
+- Styled the table date picker to visually match the table toolbar theme.
+- Increased ranking criteria modal size and readability.
+- Reordered pitcher stat cards so `Games` appears directly to the right of `Home Runs`.
+- Added ranking table `Type` column sourced from schedule `gameType` metadata.
+- Fixed ranking modal vertical drift while expanding rows by reparenting modal node to `document.body`.
+- Added persistence for ranking criteria selections via browser `localStorage` so settings are restored on return visits.
+- Widened both player and pitcher side detail panels.
+- Updated pitcher rankings name column to wrap long names and avoid truncation.
+- Updated expanded game details to use pitcher-linked highlight/action images when available.
+- Added local unknown-player headshot fallback asset at `assets/mlb/unknown-player-headshot.png` for missing pitcher data/image failures.
+- Refreshed box score table styling to better align with the current table/details design language.
+- Increased inning and `R/H/E` header emphasis and added semantic box score header/cell class hooks for stable styling.
+- Standardized box score cell sizing with fixed-size adaptable dimensions so inning/stat cells remain uniform across variable inning counts, including responsive breakpoints.
+- Kept pitcher detail panel image behavior headshot-based for known pitchers.
 
-**Methods:**
+### Data Correctness and Coverage
 
-| Method | Description | Input | Output |
-|--------|-------------|-------|--------|
-| `get(key)` | Retrieves cached data if it exists and has not expired | `key` - String cache key | Any cached data or null if not found/expired |
-| `set(key, data)` | Stores data in the cache with current timestamp | `key` - String cache key<br>`data` - Any data to cache | None, stores data in cache |
-| `cleanup()` | Removes expired items from the cache to free memory | None | None, clears expired items from cache |
-| `getOrFetch(key, fetchFn)` | Retrieves from cache or fetches from source if not cached | `key` - String cache key<br>`fetchFn` - Function to fetch data if not cached | Promise resolving to data (either from cache or newly fetched) |
+- Fixed missing pitcher stats for historical games by querying season stats with the selected game's year (instead of current year).
+- Added `gameType` propagation across parsing and pitcher stat fetch paths to correctly resolve non-regular-season splits (e.g., spring games).
+- Added schedule series metadata preservation and `F`-game disambiguation so World Baseball Classic entries render as `WBC` in the `Type` column.
+- Updated team pitcher ranking fetch to use selected game season + game type context.
+- Expanded schedule source from MLB-only to MLB + International Baseball (`sportId: '1,51'`) so WBC games in the requested window are included in rankings input.
+- Updated completed-game record normalization so matchup-row W-L reflects pre-game records instead of post-game standings values.
 
-## Assets
+### Stability Fixes
 
-### MLB Rivals
+- Added null-safe fallback rendering in `PitcherDetailPanel` to prevent `inningsPitched` null dereference crashes.
+- Hardened `PlayerDetailPanel` close lifecycle (idempotent close, timeout tracking, document-click listener cleanup) to prevent `remove()` on null race errors.
 
-**File:** `assets/mlb/mlb_rivals.json`
+### Status/Timezone Behavior
 
-Contains data about MLB team rivalries, including:
-- Recent rivalries with their team names and nicknames
-- Iconic rivalries with team names, nicknames, and descriptions
+- Schedule day boundaries now follow MLB API timezone semantics (`America/New_York`) to match MLB.com date buckets.
+- Completed-game filtering uses timezone-scoped schedule bucket day (`dates[].date`) instead of browser-local day assumptions.
+- Upcoming-day parsing includes live (`In Progress`) games so in-flight WBC/MLB games remain visible in the selected day view.
+- CET status subline was briefly added and then removed by request; final behavior remains single-line status.
 
-## CSS Styling
+### Documentation Refresh Included
 
-### Main Styles
-
-**File:** `css/styles.css`
-
-Contains all the main styling for the application, including:
-- Basic layout and typography
-- Game card styles
-- Box score table styles
-- Pitcher display styles
-- Lineup display styles
-- Player detail panel styles
-- Filter styles
-
-### Responsive Styles
-
-**File:** `css/responsive.css`
-
-Contains responsive styling for different screen sizes:
-- Tablet styles (max-width: 992px)
-- Large Mobile styles (max-width: 768px)
-- Small Mobile styles (max-width: 480px)
-
-## HTML Structure
-
-**File:** `index.html`
-
-Main HTML file for the application with the following structure:
-- Header with title and description
-- Controls section with date picker and filters
-- Games container section
-- Templates for game cards
-- Footer with attribution
-
-The HTML includes:
-- Basic metadata and viewport settings
-- CSS stylesheet links
-- Basic page structure
-- Container for game listings
-- Templates for dynamic content
-- Script imports for JavaScript modules
+- Updated `readme.md` to reflect the current table-centric experience and controls.
+- Replaced outdated system references with current `js/mlb/*` module paths and active component flow.

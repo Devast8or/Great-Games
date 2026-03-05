@@ -7,6 +7,9 @@ class PlayerDetailPanel {
         this.element = null;
         this.activePlayer = null;
         this.onClose = null;
+        this.isClosing = false;
+        this.closeTimeoutId = null;
+        this.outsideClickHandler = null;
     }
 
     /**
@@ -17,6 +20,12 @@ class PlayerDetailPanel {
     show(player, onClose) {
         this.activePlayer = player;
         this.onClose = onClose;
+
+        if (this.closeTimeoutId) {
+            clearTimeout(this.closeTimeoutId);
+            this.closeTimeoutId = null;
+            this.isClosing = false;
+        }
 
         if (this.element) {
             this.updateContent(player);
@@ -40,14 +49,15 @@ class PlayerDetailPanel {
             this.close();
         });
 
-        // Add click outside handler
-        document.addEventListener('click', (e) => {
+        this.element = panel;
+
+        this.outsideClickHandler = (e) => {
             if (this.element && !this.element.contains(e.target) && !e.target.closest('.player-row')) {
                 this.close();
             }
-        });
+        };
+        document.addEventListener('click', this.outsideClickHandler);
 
-        this.element = panel;
         document.body.appendChild(panel);
 
         // Trigger animation after a brief delay
@@ -76,6 +86,10 @@ class PlayerDetailPanel {
 
         // After fade out, update content and fade in
         setTimeout(() => {
+            if (!this.element || !content.isConnected) {
+                return;
+            }
+
             content.innerHTML = temp.querySelector('.panel-content').innerHTML;
             content.style.opacity = '1';
             this.element.classList.remove('panel-transitioning');
@@ -179,18 +193,40 @@ class PlayerDetailPanel {
      * Close the panel
      */
     close() {
-        if (this.element) {
-            this.element.classList.remove('panel-active');
-            setTimeout(() => {
-                this.element.remove();
-                this.element = null;
-                this.activePlayer = null;
-                
-                if (this.onClose) {
-                    this.onClose();
-                }
-            }, 300); // Match transition duration
+        if (!this.element || this.isClosing) {
+            return;
         }
+
+        this.isClosing = true;
+        const panelToClose = this.element;
+        panelToClose.classList.remove('panel-active');
+
+        if (this.outsideClickHandler) {
+            document.removeEventListener('click', this.outsideClickHandler);
+            this.outsideClickHandler = null;
+        }
+
+        if (this.closeTimeoutId) {
+            clearTimeout(this.closeTimeoutId);
+        }
+
+        this.closeTimeoutId = setTimeout(() => {
+            if (panelToClose && panelToClose.parentNode) {
+                panelToClose.remove();
+            }
+
+            if (this.element === panelToClose) {
+                this.element = null;
+            }
+
+            this.activePlayer = null;
+            this.isClosing = false;
+            this.closeTimeoutId = null;
+
+            if (this.onClose) {
+                this.onClose();
+            }
+        }, 300); // Match transition duration
     }
 
     /**

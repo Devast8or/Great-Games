@@ -1,9 +1,316 @@
+/* ==============================
+   Wide Desktop Tuning
+============================== */
+@media (max-width: 1480px) {
+    .app-shell {
+        grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
+    }
+
+    #games-list {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    }
+}
+
+/* ==============================
+   Laptop / Narrow Desktop
+============================== */
+@media (max-width: 1180px) {
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .control-rail {
+        position: static;
+    }
+
+    .filter-container {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    #games-list {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+}
+
+/* ==============================
+   Tablet
+============================== */
+@media (max-width: 992px) {
+    .container {
+        width: min(1720px, calc(100% - 1.4rem));
+    }
+
+    .app-header-inner {
+        min-height: 66px;
+    }
+
+    .brand-chip {
+        display: none;
+    }
+
+    .controls,
+    .games-container {
+        padding: 0.8rem;
+    }
+
+    .games-container.panel-surface {
+        --games-logo-size: clamp(220px, 52vw, 560px);
+        --games-logo-opacity: 0.12;
+    }
+
+    .date-picker {
+        grid-template-columns: 1fr;
+    }
+
+    #load-games {
+        width: 100%;
+    }
+
+    #games-list {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .team-logo {
+        width: 46px;
+        height: 46px;
+    }
+
+    .team-name {
+        max-width: 160px;
+    }
+
+    .lineups-row {
+        grid-template-columns: 1fr;
+    }
+
+    .lineup {
+        padding: 0.45rem;
+    }
+
+    .lineup-table {
+        font-size: 0.71rem;
+    }
+}
+
+/* ==============================
+   Large Mobile
+============================== */
+@media (max-width: 768px) {
+    .container {
+        width: min(1720px, calc(100% - 1rem));
+    }
+
+    .app-header-inner {
+        min-height: 62px;
+        padding: 0.6rem 0;
+    }
+
+    .brand-block h1 {
+        font-size: 1.06rem;
+    }
+
+    .brand-block p {
+        font-size: 0.76rem;
+    }
+
+    .controls-head p,
+    .results-head p {
+        font-size: 0.75rem;
+    }
+
+    .games-container.panel-surface {
+        --games-logo-size: clamp(180px, 62vw, 420px);
+        --games-logo-opacity: 0.1;
+    }
+
+    .filter-container {
+        grid-template-columns: 1fr;
+    }
+
+    #games-list {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    }
+
+    .teams {
+        padding: 0.62rem;
+    }
+
+    .team-name {
+        font-size: 0.84rem;
+        max-width: 135px;
+    }
+
+    .team-division,
+    .team-rank,
+    .team-record {
+        font-size: 0.64rem;
+    }
+
+    .vs-score-container {
+        min-width: 86px;
+    }
+
+    .top-reveal-btn {
+        font-size: 0.64rem;
+        padding: 0.3rem 0.54rem;
+    }
+
+    .score {
+        margin-top: 0.5rem;
+        padding: 0.3rem;
+    }
+
+    .box-score-table th,
+    .box-score-table td {
+        min-width: 24px;
+        padding: 0.26rem 0.31rem;
+        font-size: 0.68rem;
+    }
+
+    .score-team-logo {
+        width: calc(var(--box-logo-cell-size) - 0.5rem);
+        height: calc(var(--box-logo-cell-size) - 0.5rem);
+    }
+
+    .pitcher-container {
+        padding: 0.42rem;
+    }
+
+    .pitcher-img {
+        width: 56px;
+        height: 56px;
+    }
+
+    .pitcher-name {
+        font-size: 0.76rem;
+    }
+
+    .pitcher-stats {
+        font-size: 0.68rem;
+    }
+}
+
+/* ==============================
+   Small Mobile
+============================== */
+@media (max-width: 560px) {
+    .games-container.panel-surface {
+        --games-logo-size: clamp(155px, 72vw, 320px);
+        --games-logo-opacity: 0.08;
+    }
+
+    #games-list {
+        grid-template-columns: 1fr;
+    }
+
+    .teams {
+        grid-template-columns: 1fr;
+        gap: 0.45rem;
+    }
+
+    .team,
+    .team.home {
+        justify-content: flex-start;
+        text-align: left;
+    }
+
+    .team-name {
+        max-width: 100%;
+    }
+
+    .vs-score-container {
+        width: 100%;
+        min-width: 0;
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    .top-reveal-btn {
+        width: auto;
+    }
+
+    .lineup-table {
+        font-size: 0.67rem;
+    }
+
+    .lineup-table th,
+    .lineup-table td {
+        padding: 0.28rem;
+    }
+
+    .player-small-img {
+        width: 21px;
+        height: 21px;
+    }
+
+    .player-detail-panel,
+    .pitcher-detail-panel {
+        width: 100vw;
+        max-width: 100vw;
+    }
+
+    .player-stats-grid,
+    .pitcher-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-item-combined {
+        grid-column: span 1;
+    }
+
+    .pitcher-rankings-table {
+        font-size: 0.67rem;
+    }
+
+    .pitcher-rankings-table th,
+    .pitcher-rankings-table td {
+        padding: 0.27rem;
+    }
+}
+
+/* ==============================
+   Very Small Devices
+============================== */
+@media (max-width: 420px) {
+    .controls,
+    .games-container {
+        padding: 0.68rem;
+    }
+
+    .toggle-label {
+        padding: 0.38rem;
+    }
+
+    .toggle-name {
+        font-size: 0.74rem;
+    }
+
+    .toggle-description {
+        font-size: 0.64rem;
+    }
+
+    .team-logo {
+        width: 42px;
+        height: 42px;
+    }
+
+    .reveal-btn {
+        font-size: 0.62rem;
+    }
+
+    .box-score-table th,
+    .box-score-table td {
+        min-width: 22px;
+        font-size: 0.64rem;
+    }
+}
 /* Responsive styles */
 
 /* Tablets */
 @media (max-width: 992px) {
     #games-list {
-        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
     }
     
     .pitcher-stats {
@@ -20,12 +327,12 @@
 /* Large Mobile */
 @media (max-width: 768px) {
     #games-list {
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
     }
     
     .date-picker {
-        flex-direction: column;
-        align-items: flex-start;
+        grid-template-columns: 1fr;
+        align-items: stretch;
     }
     
     #game-date {
@@ -34,6 +341,48 @@
     
     #load-games {
         width: 100%;
+    }
+
+    .controls {
+        padding: 0.9rem;
+    }
+
+    .teams {
+        padding: 0.75rem;
+    }
+
+    .team {
+        grid-template-columns: 48px minmax(0, 1fr);
+        width: 44%;
+    }
+
+    .team.home {
+        grid-template-columns: minmax(0, 1fr) 48px;
+    }
+
+    .team-logo {
+        width: 48px;
+        height: 48px;
+    }
+
+    .team-name {
+        font-size: 0.86rem;
+    }
+
+    .team-division,
+    .team-rank,
+    .team-record {
+        font-size: 0.67rem;
+    }
+
+    .vs-score-container {
+        min-width: 92px;
+        gap: 0.35rem;
+    }
+
+    .top-reveal-btn {
+        padding: 0.35rem 0.65rem;
+        font-size: 0.7rem;
     }
     
     .filter-options {
@@ -75,20 +424,47 @@
     }
     
     .container {
-        padding: 0 15px;
+        padding: 0 12px;
     }
     
     .teams {
-        padding: 1rem;
+        padding: 0.7rem;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.65rem;
+    }
+
+    .team,
+    .team.home {
+        width: 100%;
+        grid-template-columns: 40px minmax(0, 1fr);
+    }
+
+    .team.home .team-logo {
+        grid-column: 1;
+    }
+
+    .team.home .team-name,
+    .team.home .team-division,
+    .team.home .team-rank {
+        grid-column: 2;
+        text-align: left;
     }
     
     .team-logo {
         width: 40px;
         height: 40px;
     }
+
+    .vs-score-container {
+        width: 100%;
+        min-width: 0;
+        flex-direction: row;
+        justify-content: center;
+    }
     
     .game-info {
-        padding: 1rem;
+        padding: 0.75rem;
     }
     
     .expand-btn {
@@ -120,10 +496,9 @@
         font-size: 0.8rem;
     }
     
-    .reveal-btn {
-        order: -1;
-        width: 100%;
-        margin-bottom: 0.5rem;
+    .top-reveal-btn {
+        width: auto;
+        margin-bottom: 0;
     }
 }
 
@@ -131,32 +506,29 @@
 @media (max-width: 768px) {
     .score {
         padding: 0.25rem;
-        margin: 1rem -0.5rem;  /* Reduce negative margin */
-        border-radius: 4px;    /* Keep some border radius on mobile */
+        margin: 1rem -0.5rem;
+        border-radius: 8px;
     }
 
     .box-score-table {
-        font-size: 0.75rem;
-        margin: 0 auto;  /* Ensure centering on mobile */
+        margin: 0;
+        --box-cell-size: 1.72rem;
+        --box-logo-cell-size: 2.2rem;
     }
-    
+
     .box-score-table th,
     .box-score-table td {
-        padding: 0.3rem 0.4rem;  /* Slightly reduce padding */
-        min-width: 25px;
+        padding: 0;
+        font-size: 0.66rem;
     }
 
-    .team-logo-cell {
-        width: 32px;
-    }
-
-    .score-team-logo {
-        width: 24px;
-        height: 24px;
+    .box-score-table th {
+        font-size: 0.62rem;
+        letter-spacing: 0.04em;
     }
 
     .box-score-table td.runs-cell {
-        font-size: 0.9rem;
+        font-size: 0.82rem;
     }
 
     /* Pitcher responsive styles */
@@ -211,34 +583,32 @@
     /* Ensure horizontal scrolling for lineup tables on mobile */
     .lineup {
         overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
     }
 }
 
 @media (max-width: 480px) {
     .score {
         padding: 0.25rem;
-        margin: 1rem -0.25rem;  /* Further reduce negative margin */
+        margin: 1rem -0.25rem;
+    }
+
+    .box-score-table {
+        --box-cell-size: 1.56rem;
+        --box-logo-cell-size: 2rem;
     }
 
     .box-score-table th,
     .box-score-table td {
-        padding: 0.25rem 0.3rem;  /* Further reduce padding */
-        min-width: 22px;
+        padding: 0;
+        font-size: 0.6rem;
     }
 
-    .team-logo-cell {
-        width: 28px;
+    .box-score-table th {
+        font-size: 0.56rem;
     }
 
-    .score-team-logo {
-        width: 20px;
-        height: 20px;
-    }
-
-    /* Ensure horizontal scrolling works smoothly on mobile */
-    .score {
-        -webkit-overflow-scrolling: touch;
+    .box-score-table td.runs-cell {
+        font-size: 0.74rem;
     }
 
     /* Pitcher styles for small screens */
@@ -334,5 +704,182 @@
     
     .toggle-input:checked + .toggle-label .toggle-slider:before {
         transform: translateX(22px);
+    }
+}
+
+/* =====================================
+   Table View Responsive Overrides
+===================================== */
+@media (max-width: 992px) {
+    .games-table {
+        min-width: 900px;
+    }
+
+    .games-table .col-venue {
+        max-width: 240px;
+    }
+
+    .game-details-content .lineups-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .games-table {
+        min-width: 790px;
+    }
+
+    .games-table thead th,
+    .games-table tbody td {
+        padding: 0.48rem 0.5rem;
+    }
+
+    .games-table .col-venue {
+        max-width: 190px;
+    }
+
+    .games-table .col-rating,
+    .games-table .col-status {
+        width: 92px;
+        font-size: 0.73rem;
+    }
+
+    .games-table .th-game-type,
+    .games-table .col-game-type {
+        width: 96px;
+        font-size: 0.72rem;
+    }
+
+    .table-team-logo {
+        width: 28px;
+        height: 28px;
+    }
+
+    .table-team-name {
+        font-size: 0.77rem;
+    }
+
+    .table-team-record {
+        font-size: 0.63rem;
+    }
+
+    .game-details-content {
+        padding: 0.62rem;
+    }
+
+    .game-details-actions {
+        align-items: flex-start;
+    }
+
+    .details-meta {
+        font-size: 0.73rem;
+        min-width: 0;
+        width: 100%;
+        white-space: normal;
+    }
+
+    .details-actions-right {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 560px) {
+    .games-table {
+        min-width: 620px;
+    }
+
+    .games-table thead th:nth-child(3),
+    .games-table tbody td.col-venue {
+        display: none;
+    }
+
+    .games-table .th-rank,
+    .games-table .th-expand,
+    .games-table .col-rank,
+    .games-table .col-expand {
+        width: 52px;
+    }
+
+    .games-table .col-rating,
+    .games-table .col-status {
+        width: 82px;
+        font-size: 0.7rem;
+    }
+
+    .games-table .th-game-type,
+    .games-table .col-game-type {
+        width: 90px;
+        font-size: 0.68rem;
+    }
+
+    .table-reveal-btn {
+        font-size: 0.62rem;
+        padding: 0.34rem 0.56rem;
+        width: 13.25rem;
+        min-width: 13.25rem;
+    }
+}
+
+/* =====================================
+   Ranking Modal Responsive Overrides
+===================================== */
+@media (max-width: 992px) {
+    .filters-modal .filter-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .table-toolbar {
+        align-items: flex-end;
+        gap: 0.62rem;
+    }
+
+    .settings-inline-btn {
+        min-height: 38px;
+        padding: 0.42rem 0.62rem;
+    }
+
+    .settings-inline-label {
+        font-size: 0.7rem;
+    }
+
+    .settings-inline-icon {
+        font-size: 1rem;
+    }
+
+    .filters-modal {
+        padding: 0.7rem;
+    }
+
+    .filters-modal-panel {
+        width: calc(100vw - 1.4rem);
+    }
+
+    .filters-modal .filter-content {
+        max-height: calc(100vh - 6.9rem);
+        padding: 0.62rem;
+    }
+
+    .filters-modal .filter-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 560px) {
+    .table-toolbar {
+        flex-wrap: wrap;
+        align-items: stretch;
+    }
+
+    .date-picker.table-date-picker {
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+    }
+
+    .settings-inline-btn {
+        margin-left: auto;
     }
 }

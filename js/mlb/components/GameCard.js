@@ -16,6 +16,9 @@ class GameCard {
         this.lineupsLoaded = false;
         this.cachedPitchers = null;
         this.cachedLineups = null;
+        this.loadingDetails = false;
+        this.loadingLabel = null;
+        this.lineupsRowElement = null;
     }
 
     /**
@@ -47,7 +50,6 @@ class GameCard {
             const awayRecord = document.createElement('span');
             awayRecord.className = 'team-record';
             awayRecord.textContent = `(${this.game.awayTeam.record.wins}-${this.game.awayTeam.record.losses})`;
-            awayRecord.style.cssText = 'margin-left: 5px; font-size: 0.9rem;';
             
             const awayNameElement = this.element.querySelector('.away .team-name');
             awayNameElement.appendChild(awayRecord);
@@ -63,7 +65,6 @@ class GameCard {
             const homeRecord = document.createElement('span');
             homeRecord.className = 'team-record';
             homeRecord.textContent = `(${this.game.homeTeam.record.wins}-${this.game.homeTeam.record.losses})`;
-            homeRecord.style.cssText = 'margin-left: 5px; font-size: 0.9rem;';
             
             const homeNameElement = this.element.querySelector('.home .team-name');
             homeNameElement.appendChild(homeRecord);
@@ -86,7 +87,6 @@ class GameCard {
             const divElement = document.createElement('span');
             divElement.className = 'team-division';
             divElement.textContent = team.ranking.divisionName;
-            divElement.style.cssText = 'font-size: 0.9rem; color: rgba(255,255,255,0.8);';
             
             const nameElement = this.element.querySelector(`.${teamType} .team-name`);
             nameElement.parentNode.insertBefore(divElement, nameElement.nextSibling);
@@ -94,7 +94,6 @@ class GameCard {
 
         if (team.ranking?.divisionRank) {
             rankElement.textContent = `Div Rank: ${team.ranking.divisionRank}`;
-            rankElement.style.cssText = 'font-size: 0.9rem;';
             rankElement.classList.remove('hidden');
         } else {
             rankElement.classList.add('hidden');
@@ -221,11 +220,8 @@ class GameCard {
             </span>
         `;
         
-        ratingElement.style.cssText = 'margin: 0.5rem 0; text-align: center; color: white;';
-        
         // Add click event listener to stars to log detailed scoring breakdown
         const starsElement = ratingElement.querySelector('.stars');
-        starsElement.style.cursor = 'pointer';
         starsElement.addEventListener('click', () => this.logScoringDetails());
         
         const teamsContainer = this.element.querySelector('.teams');
@@ -732,7 +728,7 @@ class GameCard {
         
         const revealBtn = document.createElement('button');
         revealBtn.className = 'reveal-btn top-reveal-btn';
-        revealBtn.textContent = 'Reveal Score';
+        revealBtn.textContent = 'Reveal Full Score';
         
         container.appendChild(vsElement.cloneNode(true));
         container.appendChild(revealBtn);
@@ -749,7 +745,7 @@ class GameCard {
         revealBtn.addEventListener('click', () => {
             scoreElement.classList.toggle('hidden');
             revealBtn.textContent = scoreElement.classList.contains('hidden') ? 
-                'Reveal Score' : 'Hide Score';
+                'Reveal Full Score' : 'Hide Score';
         });
     }
 
@@ -762,11 +758,19 @@ class GameCard {
         if (!pitcher || pitcher.stats) return pitcher;
         
         try {
-            const seasonYear = new Date().getFullYear();
+            const parsedGameDate = this.game?.date ? new Date(this.game.date) : null;
+            const hasValidGameDate = parsedGameDate && !Number.isNaN(parsedGameDate.getTime());
+            const seasonYear = hasValidGameDate ? parsedGameDate.getFullYear() : new Date().getFullYear();
+            const gameType = this.game?.gameType || 'R';
+
+            pitcher.seasonYear = seasonYear;
+            pitcher.gameType = gameType;
+
             const stats = await API.apiRequest(`/people/${pitcher.id}/stats`, {
                 stats: 'season',
                 season: seasonYear,
-                group: 'pitching'
+                group: 'pitching',
+                gameType
             });
             
             if (stats.stats?.[0]?.splits?.[0]?.stat) {
@@ -815,10 +819,16 @@ class GameCard {
         
         const container = document.createElement('div');
         container.className = 'lineups-container hidden';
+
+        this.loadingLabel = document.createElement('div');
+        this.loadingLabel.className = 'card-details-loading hidden';
+        this.loadingLabel.textContent = 'Loading...';
+        container.appendChild(this.loadingLabel);
         
         // Create lineups row to keep them side by side
         const lineupsRow = document.createElement('div');
-        lineupsRow.className = 'lineups-row';
+        lineupsRow.className = 'lineups-row hidden';
+        this.lineupsRowElement = lineupsRow;
         
         // Add lineup sections with pitcher images above each lineup
         ['away', 'home'].forEach(teamType => {
@@ -829,16 +839,11 @@ class GameCard {
             // Add pitcher container above each lineup
             const pitcherContainer = document.createElement('div');
             pitcherContainer.className = `pitcher-display ${teamType}-pitcher-display`;
-            pitcherContainer.innerHTML = `<div class="pitcher-loading">Loading pitcher...</div>`;
             teamColumn.appendChild(pitcherContainer);
             
             // Add lineup container
             const teamContainer = document.createElement('div');
             teamContainer.className = `lineup ${teamType}-lineup`;
-            teamContainer.innerHTML = `
-                <h4>${teamType === 'away' ? 'Away' : 'Home'} Lineup</h4>
-                <div class="lineup-loading">Loading lineup...</div>
-            `;
             teamColumn.appendChild(teamContainer);
             
             // Add the column to the row
@@ -859,50 +864,96 @@ class GameCard {
             container.classList.add('hidden');
             button.innerHTML = '<span class="arrow-down">▼</span> Show Pitchers & Lineups';
             this.lineupShown = false;
-        } else {
-            // Showing the content
-            container.classList.remove('hidden');
-            button.innerHTML = '<span class="arrow-up">▲</span> Hide Pitchers & Lineups';
-            
-            // Get pitcher displays and lineup containers
-            const pitcherDisplays = container.querySelectorAll('.pitcher-display');
-            const lineupsRow = container.querySelector('.lineups-row');
-
-            try {
-                // Load content if not already loaded
-                if (!this.pitchersLoaded || !this.lineupsLoaded) {
-                    await Promise.all([
-                        this.loadAndRenderPitchers(container),
-                        this.loadAndRenderLineups(container)
-                    ]);
-                }
-                
-                this.lineupShown = true;
-            } catch (error) {
-                console.error('Error loading content:', error);
-                container.innerHTML = '<div class="error">Error loading content. Please try again.</div>';
-            }
-        }
-    }
-
-    async loadAndRenderPitchers(container) {
-        if (this.pitchersLoaded && this.cachedPitchers) {
-            const pitcherDisplays = container.querySelectorAll('.pitcher-display');
-            pitcherDisplays.forEach((display, index) => {
-                const teamType = index === 0 ? 'away' : 'home';
-                if (this.game[teamType + 'Team'].pitcher) {
-                    // Clear current content
-                    display.innerHTML = '';
-                    // Add the cached pitcher component to the display
-                    if (this.cachedPitchers[teamType] instanceof HTMLElement) {
-                        display.appendChild(this.cachedPitchers[teamType]);
-                    }
-                }
-            });
             return;
         }
 
-        // Load stats for both pitchers in parallel
+        // Showing the content
+        container.classList.remove('hidden');
+        button.innerHTML = '<span class="arrow-up">▲</span> Hide Pitchers & Lineups';
+
+        if (this.loadingDetails) {
+            this.showCardDetailsLoading();
+            return;
+        }
+
+        if (this.pitchersLoaded && this.lineupsLoaded) {
+            this.hideCardDetailsLoading();
+            this.lineupShown = true;
+            return;
+        }
+
+        this.loadingDetails = true;
+        this.showCardDetailsLoading();
+
+        try {
+            const loadingTasks = [];
+
+            if (!this.pitchersLoaded) {
+                loadingTasks.push(this.loadPitchersData());
+            }
+
+            if (!this.lineupsLoaded) {
+                loadingTasks.push(this.loadLineupsData());
+            }
+
+            await Promise.all(loadingTasks);
+
+            this.renderPitchers(container);
+            this.renderLineups(container);
+            this.hideCardDetailsLoading();
+            this.lineupShown = true;
+        } catch (error) {
+            console.error('Error loading content:', error);
+            this.game.awayTeam.lineup = this.game.awayTeam.lineup || [];
+            this.game.homeTeam.lineup = this.game.homeTeam.lineup || [];
+            this.renderPitchers(container);
+            this.renderLineups(container);
+            this.showCardDetailsError('Some information is Not Avaliable.');
+            this.lineupShown = true;
+        }
+
+        this.loadingDetails = false;
+    }
+
+    showCardDetailsLoading() {
+        if (this.loadingLabel) {
+            this.loadingLabel.textContent = 'Loading...';
+            this.loadingLabel.classList.remove('hidden', 'card-details-loading-error');
+        }
+
+        if (this.lineupsRowElement) {
+            this.lineupsRowElement.classList.add('hidden');
+        }
+    }
+
+    hideCardDetailsLoading() {
+        if (this.loadingLabel) {
+            this.loadingLabel.classList.add('hidden');
+            this.loadingLabel.classList.remove('card-details-loading-error');
+        }
+
+        if (this.lineupsRowElement) {
+            this.lineupsRowElement.classList.remove('hidden');
+        }
+    }
+
+    showCardDetailsError(message) {
+        if (this.loadingLabel) {
+            this.loadingLabel.textContent = message;
+            this.loadingLabel.classList.remove('hidden');
+            this.loadingLabel.classList.add('card-details-loading-error');
+        }
+
+        if (this.lineupsRowElement) {
+            this.lineupsRowElement.classList.remove('hidden');
+        }
+    }
+
+    async loadPitchersData() {
+        if (this.pitchersLoaded) {
+            return;
+        }
+
         const [awayPitcher, homePitcher] = await Promise.all([
             this.loadPitcherStats(this.game.awayTeam.pitcher),
             this.loadPitcherStats(this.game.homeTeam.pitcher)
@@ -911,81 +962,74 @@ class GameCard {
         // Update pitcher data in game object
         if (awayPitcher) this.game.awayTeam.pitcher = awayPitcher;
         if (homePitcher) this.game.homeTeam.pitcher = homePitcher;
-        
-        // Create PitcherDisplay components instead of HTML strings
-        const awayPitcherDisplay = new PitcherDisplay(this.game.awayTeam.pitcher, 'away');
-        const homePitcherDisplay = new PitcherDisplay(this.game.homeTeam.pitcher, 'home');
-        
-        // Cache for future use - store the DOM elements
+
         this.cachedPitchers = {
-            away: awayPitcherDisplay.render(),
-            home: homePitcherDisplay.render()
+            away: this.game.awayTeam.pitcher || null,
+            home: this.game.homeTeam.pitcher || null
         };
-        
-        // Clear and update the displays
-        const pitcherDisplays = container.querySelectorAll('.pitcher-display');
-        pitcherDisplays.forEach((display, index) => {
-            const teamType = index === 0 ? 'away' : 'home';
-            // Clear current content
-            display.innerHTML = '';
-            // Add the pitcher component to the display
-            display.appendChild(this.cachedPitchers[teamType]);
-        });
-        
+
         this.pitchersLoaded = true;
     }
 
-    async loadAndRenderLineups(container) {
+    renderPitchers(container) {
+        const pitcherDisplays = container.querySelectorAll('.pitcher-display');
+        pitcherDisplays.forEach((display, index) => {
+            const teamType = index === 0 ? 'away' : 'home';
+
+            display.innerHTML = '';
+
+            const pitcherData = this.cachedPitchers?.[teamType] || this.game[teamType + 'Team']?.pitcher || null;
+            const pitcherDisplay = new PitcherDisplay(pitcherData, teamType);
+            display.appendChild(pitcherDisplay.render());
+        });
+    }
+
+    async loadLineupsData() {
         if (this.lineupsLoaded && this.cachedLineups) {
-            // Find the lineup containers within their columns
-            const awayLineupContainer = container.querySelector('.away-column .lineup');
-            const homeLineupContainer = container.querySelector('.home-column .lineup');
-            
-            if (awayLineupContainer && homeLineupContainer) {
-                awayLineupContainer.innerHTML = this.cachedLineups.away;
-                homeLineupContainer.innerHTML = this.cachedLineups.home;
-            }
             return;
         }
 
         try {
             const lineups = await API.fetchStartingLineups(this.game.id);
-            this.game.awayTeam.lineup = lineups.away;
-            this.game.homeTeam.lineup = lineups.home;
-            
-            // Create LineupDisplay components
-            const awayLineup = new LineupDisplay('away', this.game.awayTeam.lineup);
-            const homeLineup = new LineupDisplay('home', this.game.homeTeam.lineup);
-            
-            // Find the lineup containers within their columns
-            const awayLineupContainer = container.querySelector('.away-column .lineup');
-            const homeLineupContainer = container.querySelector('.home-column .lineup');
-            
-            if (awayLineupContainer && homeLineupContainer) {
-                // Clear existing content and render new lineups
-                awayLineupContainer.innerHTML = '';
-                homeLineupContainer.innerHTML = '';
-                
-                awayLineupContainer.appendChild(awayLineup.render());
-                homeLineupContainer.appendChild(homeLineup.render());
-                
-                // Cache the rendered lineups
-                this.cachedLineups = {
-                    away: awayLineupContainer.innerHTML,
-                    home: homeLineupContainer.innerHTML
-                };
-                
-                this.lineupsLoaded = true;
-            }
+            this.game.awayTeam.lineup = Array.isArray(lineups?.away) ? lineups.away : [];
+            this.game.homeTeam.lineup = Array.isArray(lineups?.home) ? lineups.home : [];
         } catch (error) {
-            console.error('Error loading lineups:', error);
-            container.querySelectorAll('.lineup').forEach(el => {
-                el.innerHTML = `
-                    <h4>${el.classList.contains('away-lineup') ? 'Away' : 'Home'} Lineup</h4>
-                    <div class="error">Error loading lineup</div>
-                `;
-            });
+            console.warn(`Lineup data not available for game ${this.game.id}:`, error);
+            this.game.awayTeam.lineup = [];
+            this.game.homeTeam.lineup = [];
         }
+
+        this.cachedLineups = {
+            away: this.game.awayTeam.lineup || [],
+            home: this.game.homeTeam.lineup || []
+        };
+
+        this.lineupsLoaded = true;
+    }
+
+    renderLineups(container) {
+        const awayLineupContainer = container.querySelector('.away-column .lineup');
+        const homeLineupContainer = container.querySelector('.home-column .lineup');
+
+        if (!awayLineupContainer || !homeLineupContainer) {
+            return;
+        }
+
+        const awayLineupData = this.cachedLineups?.away || this.game.awayTeam.lineup || [];
+        const homeLineupData = this.cachedLineups?.home || this.game.homeTeam.lineup || [];
+
+        const awayLineup = new LineupDisplay('away', awayLineupData, {
+            emptyStateText: 'Not Avaliable'
+        });
+        const homeLineup = new LineupDisplay('home', homeLineupData, {
+            emptyStateText: 'Not Avaliable'
+        });
+
+        awayLineupContainer.innerHTML = '';
+        homeLineupContainer.innerHTML = '';
+
+        awayLineupContainer.appendChild(awayLineup.render());
+        homeLineupContainer.appendChild(homeLineup.render());
     }
 
     /**
@@ -995,8 +1039,21 @@ class GameCard {
      * @returns {string} - HTML for pitcher display
      */
     createPitcherDisplay(pitcher, teamType) {
+        const fallbackHeadshotUrl = 'assets/mlb/unknown-player-headshot.png';
+
         if (!pitcher) {
-            return `<div class="no-pitcher-data">No starting pitcher data available</div>`;
+            return `
+                <div class="pitcher-container ${teamType}-pitcher-container">
+                    <div class="pitcher-header">Starting Pitcher</div>
+                    <div class="pitcher-img ${teamType}-pitcher-img" style="width: 170px; height: 170px;">
+                        <img src="${fallbackHeadshotUrl}"
+                             alt="Unknown Pitcher"
+                             title="Unknown Pitcher">
+                    </div>
+                    <div class="pitcher-name">Unknown Pitcher</div>
+                    <div class="pitcher-stats">Not Avaliable</div>
+                </div>
+            `;
         }
         
         const imageUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pitcher.id}/headshot/67/current`;
@@ -1008,7 +1065,7 @@ class GameCard {
                     <img src="${imageUrl}"
                          alt="${pitcher.name}"
                          title="${pitcher.name}"
-                         onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png'">
+                         onerror="this.src='${fallbackHeadshotUrl}'">
                 </div>
                 <div class="pitcher-name">${pitcher.name}</div>
                 <div class="pitcher-stats">
@@ -1024,7 +1081,7 @@ class GameCard {
      * @returns {string} - Formatted stats string
      */
     formatPitcherStats(stats) {
-        if (!stats) return 'Stats not available';
+        if (!stats) return 'Not Avaliable';
         
         const winLossText = (Number(stats.wins) > 0 || Number(stats.losses) > 0) ? 
             `, ${stats.wins}-${stats.losses}` : '';

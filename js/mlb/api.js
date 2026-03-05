@@ -15,6 +15,7 @@ export class APIError extends Error {
 
 export const API = {
     BASE_URL: 'https://statsapi.mlb.com/api/v1',
+    SCHEDULE_TIMEZONE: 'America/New_York',
     cache: new APICache(),
 
     /**
@@ -54,8 +55,19 @@ export const API = {
 
     async fetchGames(date) {
         return this.apiRequest('/schedule', {
-            sportId: 1,
+            sportId: '1,51',
             date,
+            timeZone: this.SCHEDULE_TIMEZONE,
+            hydrate: 'team,linescore,game(content(media(epg))),probablePitcher'
+        });
+    },
+
+    async fetchGamesInRange(startDate, endDate) {
+        return this.apiRequest('/schedule', {
+            sportId: '1,51',
+            startDate,
+            endDate,
+            timeZone: this.SCHEDULE_TIMEZONE,
             hydrate: 'team,linescore,game(content(media(epg))),probablePitcher'
         });
     },
@@ -136,16 +148,18 @@ export const API = {
         const lineups = { away: [], home: [] };
         
         ['away', 'home'].forEach(teamType => {
-            const team = boxscore.teams[teamType];
-            boxscore.teams?.[teamType]?.battingOrder?.forEach(playerId => {
-                const player = team.players[`ID${playerId}`];
+            const team = boxscore?.teams?.[teamType];
+            const battingOrder = Array.isArray(team?.battingOrder) ? team.battingOrder : [];
+
+            battingOrder.forEach(playerId => {
+                const player = team?.players?.[`ID${playerId}`];
                 
                 if (player) {
                     lineups[teamType].push({
                         id: playerId,
                         name: Utils.getPlayerName(player),
                         position: player.position?.abbreviation || 'N/A',
-                        teamId: team.team.id,
+                        teamId: team?.team?.id || null,
                         stats: Utils.processPlayerStats(
                             player.seasonStats?.batting || player.stats?.batting,
                             'batting'
@@ -161,16 +175,22 @@ export const API = {
     /**
      * Fetch all starting pitchers from a team
      * @param {number} teamId - The team ID to fetch pitchers for
+     * @param {number} seasonYear - The season year to query
+     * @param {string} gameType - MLB game type code (e.g., R, S)
      * @returns {Promise<Array>} - Promise resolving to an array of pitchers with stats
      */
-    async fetchTeamPitchers(teamId) {
+    async fetchTeamPitchers(teamId, seasonYear = new Date().getFullYear(), gameType = 'R') {
         try {
-            const seasonYear = new Date().getFullYear();
+            const parsedSeasonYear = Number.parseInt(seasonYear, 10);
+            const requestedSeasonYear = Number.isFinite(parsedSeasonYear)
+                ? parsedSeasonYear
+                : new Date().getFullYear();
+            const requestedGameType = String(gameType || 'R').toUpperCase();
             
             // Get the team roster with focus on pitchers
             const roster = await this.apiRequest(`/teams/${teamId}/roster`, {
                 rosterType: 'active',
-                season: seasonYear
+                season: requestedSeasonYear
             });
 
             // Filter for pitchers
@@ -183,8 +203,9 @@ export const API = {
                 pitchersData.map(async player => {
                     const playerStats = await this.apiRequest(`/people/${player.person.id}/stats`, {
                         stats: 'season',
-                        season: seasonYear,
-                        group: 'pitching'
+                        season: requestedSeasonYear,
+                        group: 'pitching',
+                        gameType: requestedGameType
                     });
                     
                     let stats = null;
@@ -243,6 +264,8 @@ export const API = {
                             id: player.person.id,
                             name: playerName,
                             teamId: teamId,
+                            seasonYear: requestedSeasonYear,
+                            gameType: requestedGameType,
                             stats: stats
                         };
                     }
