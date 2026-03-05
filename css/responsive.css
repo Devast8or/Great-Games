@@ -719,6 +719,11 @@
         max-width: 240px;
     }
 
+    .games-table .col-played-date {
+        width: 120px;
+        max-width: 120px;
+    }
+
     .game-details-content .lineups-row {
         grid-template-columns: 1fr;
     }
@@ -736,6 +741,12 @@
 
     .games-table .col-venue {
         max-width: 190px;
+    }
+
+    .games-table .col-played-date {
+        width: 108px;
+        max-width: 108px;
+        font-size: 0.73rem;
     }
 
     .games-table .col-rating,
@@ -790,9 +801,16 @@
         min-width: 620px;
     }
 
-    .games-table thead th:nth-child(3),
+    .games-table .th-venue,
     .games-table tbody td.col-venue {
         display: none;
+    }
+
+    .games-table .th-played-date,
+    .games-table .col-played-date {
+        width: 96px;
+        max-width: 96px;
+        font-size: 0.67rem;
     }
 
     .games-table .th-rank,
@@ -837,6 +855,10 @@
         gap: 0.62rem;
     }
 
+    .table-toolbar-actions {
+        gap: 0.44rem;
+    }
+
     .settings-inline-btn {
         min-height: 38px;
         padding: 0.42rem 0.62rem;
@@ -866,6 +888,19 @@
     .filters-modal .filter-container {
         grid-template-columns: 1fr;
     }
+
+    .period-filter-field input,
+    .period-filter-field select {
+        font-size: 0.78rem;
+    }
+
+    .period-filter-stepper {
+        width: 1.8rem;
+    }
+
+    .period-filter-team-options {
+        max-height: 188px;
+    }
 }
 
 @media (max-width: 560px) {
@@ -879,7 +914,31 @@
         width: 100%;
     }
 
+    .table-toolbar-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
     .settings-inline-btn {
-        margin-left: auto;
+        margin-left: 0;
+    }
+
+    .active-filter-badge {
+        width: 100%;
+        justify-content: space-between;
+        border-radius: 12px;
+    }
+
+    .period-filter-stepper {
+        width: 1.68rem;
+        gap: 2px;
+    }
+
+    .period-filter-step-btn {
+        font-size: 0.67rem;
+    }
+
+    .period-filter-team-options {
+        max-height: 152px;
     }
 }
