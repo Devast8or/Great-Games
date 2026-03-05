@@ -729,9 +729,12 @@ class UI {
             console.log('Selected date:', date);
             console.log('MLB schedule today:', mlbToday);
             
-            if (date >= mlbToday) {
+            if (date > mlbToday) {
                 console.log('Loading scheduled or upcoming games');
                 await this.loadFutureGames(date);
+            } else if (date === mlbToday) {
+                console.log('Loading today schedule (completed, live, and upcoming games)');
+                await this.loadCurrentDayGames(date);
             } else {
                 console.log('Loading completed games');
                 await this.loadCompletedGames(date);
@@ -755,13 +758,79 @@ class UI {
         this.registerMlbTeamIds(teamRankings);
         let games = Parser.processGames(gamesData, parserOptions);
 
+        this.applyTeamRankings(games, teamRankings);
+
+        games = await Parser.enhanceGamesWithDetailedData(games, standingsDate);
+        return games;
+    }
+
+    /**
+     * Apply standings ranking metadata to parsed games.
+     * @param {Array} games - Parsed games
+     * @param {Object} teamRankings - Team rankings keyed by team id
+     */
+    applyTeamRankings(games, teamRankings) {
+        if (!Array.isArray(games)) {
+            return;
+        }
+
         games.forEach((game) => {
             game.awayTeam.ranking = teamRankings[game.awayTeam.id] || { divisionRank: 0 };
             game.homeTeam.ranking = teamRankings[game.homeTeam.id] || { divisionRank: 0 };
         });
+    }
 
-        games = await Parser.enhanceGamesWithDetailedData(games, standingsDate);
-        return games;
+    /**
+     * Merge completed/future game lists in schedule order for the selected day.
+     * @param {Object} gamesData - Raw schedule payload
+     * @param {Array} completedGames - Parsed completed games
+     * @param {Array} futureGames - Parsed future/live games
+     * @returns {Array} - Combined games in schedule order
+     */
+    mergeGamesByScheduleOrder(gamesData, completedGames = [], futureGames = []) {
+        const gamesById = new Map();
+
+        completedGames.forEach((game) => {
+            const gameId = Number(game?.id);
+            if (Number.isFinite(gameId)) {
+                gamesById.set(gameId, game);
+            }
+        });
+
+        futureGames.forEach((game) => {
+            const gameId = Number(game?.id);
+            if (Number.isFinite(gameId) && !gamesById.has(gameId)) {
+                gamesById.set(gameId, game);
+            }
+        });
+
+        const orderedGames = [];
+        const seenIds = new Set();
+
+        (gamesData?.dates || []).forEach((dateEntry) => {
+            (dateEntry?.games || []).forEach((rawGame) => {
+                const gameId = Number(rawGame?.gamePk);
+                if (!Number.isFinite(gameId) || seenIds.has(gameId)) {
+                    return;
+                }
+
+                const game = gamesById.get(gameId);
+                if (!game) {
+                    return;
+                }
+
+                orderedGames.push(game);
+                seenIds.add(gameId);
+            });
+        });
+
+        gamesById.forEach((game, gameId) => {
+            if (!seenIds.has(gameId)) {
+                orderedGames.push(game);
+            }
+        });
+
+        return orderedGames;
     }
 
     /**
@@ -794,6 +863,45 @@ class UI {
     }
 
     /**
+     * Load mixed same-day schedule:
+     * includes completed games plus live/upcoming games in schedule order.
+     * @param {string} date - Date in YYYY-MM-DD format
+     */
+    async loadCurrentDayGames(date) {
+        try {
+            this.showLoading();
+
+            const [gamesData, standingsData] = await Promise.all([
+                API.fetchGames(date),
+                API.fetchStandings(date)
+            ]);
+
+            const teamRankings = API.processTeamRankings(standingsData);
+            this.registerMlbTeamIds(teamRankings);
+
+            let completedGames = Parser.processGames(gamesData, {
+                targetPlayedDate: date
+            });
+            this.applyTeamRankings(completedGames, teamRankings);
+            completedGames = await Parser.enhanceGamesWithDetailedData(completedGames, date);
+
+            const futureGames = Parser.processFutureGames(gamesData);
+            this.applyTeamRankings(futureGames, teamRankings);
+
+            const games = this.mergeGamesByScheduleOrder(gamesData, completedGames, futureGames);
+
+            this.registerTeamsFromGames(games);
+            this.games = games;
+            this.isFutureGames = true;
+            this.displayGames();
+        } catch (error) {
+            console.error('Error loading current-day games:', error);
+            this.showError(error.message || 'Failed to load current-day games');
+            this.hideLoading();
+        }
+    }
+
+    /**
      * Load future games for a date
      */
     async loadFutureGames(date) {
@@ -809,10 +917,7 @@ class UI {
             this.registerMlbTeamIds(teamRankings);
             const games = Parser.processFutureGames(gamesData);
 
-            games.forEach(game => {
-                game.awayTeam.ranking = teamRankings[game.awayTeam.id] || { divisionRank: 0 };
-                game.homeTeam.ranking = teamRankings[game.homeTeam.id] || { divisionRank: 0 };
-            });
+            this.applyTeamRankings(games, teamRankings);
 
             this.registerTeamsFromGames(games);
             this.games = games;
@@ -1106,6 +1211,8 @@ class UI {
         this.gameCards.clear();
 
         let displayGames = this.games;
+        let rankByGameId = null;
+
         if (!this.isFutureGames) {
             const options = this.getRankingOptions();
             displayGames = Ranker.rankGames(this.games, options);
@@ -1119,6 +1226,32 @@ class UI {
                     this.getStarValueFromExcitementScore(game?.excitementScore) >= minimumStars
                 ));
             }
+        } else if (this.isMixedScheduleView(displayGames)) {
+            const options = this.getRankingOptions();
+            const completedGames = displayGames.filter((game) => !game?.isFuture);
+            const rankedCompletedGames = Ranker.rankGames(completedGames, options);
+            const rankedCompletedById = new Map();
+            rankByGameId = new Map();
+
+            rankedCompletedGames.forEach((game, index) => {
+                const gameId = Number(game?.id);
+                if (!Number.isFinite(gameId)) {
+                    return;
+                }
+
+                rankedCompletedById.set(gameId, game);
+                rankByGameId.set(gameId, index + 1);
+            });
+
+            // Keep schedule order, but replace completed entries with ranked-scored copies.
+            displayGames = displayGames.map((game) => {
+                const gameId = Number(game?.id);
+                if (!Number.isFinite(gameId)) {
+                    return game;
+                }
+
+                return rankedCompletedById.get(gameId) || game;
+            });
         }
 
         if (!displayGames.length) {
@@ -1162,8 +1295,13 @@ class UI {
         tbody.className = 'games-table-body';
 
         displayGames.forEach((game, index) => {
+            const gameId = Number(game?.id);
+            const rank = rankByGameId
+                ? (rankByGameId.get(gameId) || '-')
+                : index + 1;
+
             const row = new GameTableRow(game, {
-                rank: index + 1,
+                rank,
                 index,
                 isFuture: this.isFutureGames,
                 showPlayedDate: usePlayedDateColumn
@@ -1235,9 +1373,22 @@ class UI {
      * Refresh game rankings
      */
     refreshGameRankings() {
-        if (this.games?.length && !this.isFutureGames) {
+        if (this.games?.length && (!this.isFutureGames || this.isMixedScheduleView())) {
             this.displayGames();
         }
+    }
+
+    /**
+     * True when the table is in future-mode but includes completed games.
+     * @param {Array} games - Games list to inspect
+     * @returns {boolean} - Whether mixed schedule view is active
+     */
+    isMixedScheduleView(games = this.games) {
+        if (!this.isFutureGames || !Array.isArray(games) || games.length === 0) {
+            return false;
+        }
+
+        return games.some((game) => !game?.isFuture);
     }
 
     /**

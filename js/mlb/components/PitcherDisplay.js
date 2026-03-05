@@ -13,8 +13,21 @@ class PitcherDisplay {
         this.pitcherPanel = new PitcherDetailPanel(teamType);
     }
 
+    getActionImageUrl(pitcherId) {
+        return `https://img.mlbstatic.com/mlb-photos/image/upload/w_426,q_auto:best/v1/people/${pitcherId}/action/hero/current`;
+    }
+
     getHeadshotUrl(pitcherId) {
         return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pitcherId}/headshot/67/current`;
+    }
+
+    getImageErrorHandler(pitcherId) {
+        const numericPitcherId = Number(pitcherId);
+        const headshotUrl = Number.isFinite(numericPitcherId)
+            ? this.getHeadshotUrl(numericPitcherId)
+            : this.headshotFallbackUrl;
+
+        return `if(this.dataset.fallbackTried==='1'){this.onerror=null;this.src='${this.headshotFallbackUrl}';}else{this.dataset.fallbackTried='1';this.src='${headshotUrl}';}`;
     }
 
     getPitcherDisplayData(pitcher = this.pitcher) {
@@ -37,7 +50,7 @@ class PitcherDisplay {
             return this.headshotFallbackUrl;
         }
 
-        return this.getHeadshotUrl(pitcher?.id);
+        return this.getActionImageUrl(pitcher?.id);
     }
 
     /**
@@ -50,6 +63,7 @@ class PitcherDisplay {
 
         const pitcherData = this.getPitcherDisplayData();
         const imageUrl = this.getDisplayImageUrl(pitcherData);
+        const imageErrorHandler = this.getImageErrorHandler(pitcherData.id);
         container.classList.toggle('pitcher-data-missing', !pitcherData.hasPitcherData);
         
         container.innerHTML = `
@@ -57,7 +71,7 @@ class PitcherDisplay {
                 <img src="${imageUrl}"
                      alt="${pitcherData.name}"
                      title="${pitcherData.name}"
-                     onerror="this.src='${this.headshotFallbackUrl}'">
+                     onerror="${imageErrorHandler}">
             </div>
             <div class="pitcher-card-body">
                 <div class="pitcher-name">${pitcherData.name}</div>
@@ -131,10 +145,8 @@ class PitcherDisplay {
         if (!pitcher?.stats) return 'Not Avaliable';
 
         const stats = pitcher.stats;
-        const hasSeason = Number(stats.wins) > 0 || Number(stats.losses) > 0;
-        const winLoss = hasSeason ? `, ${stats.wins}-${stats.losses}` : '';
-        
-        return `${stats.gamesPlayed} G, ${stats.era} ERA${winLoss}`;
+
+        return `${stats.gamesPlayed} G, ${stats.era} ERA`;
     }
 
     /**
@@ -147,6 +159,7 @@ class PitcherDisplay {
             // Instead of replacing the entire element, just update its contents
             const pitcherData = this.getPitcherDisplayData(newPitcher);
             const imageUrl = this.getDisplayImageUrl(pitcherData);
+            const imageErrorHandler = this.getImageErrorHandler(pitcherData.id);
 
             this.element.classList.remove('hidden');
             this.element.classList.toggle('pitcher-data-missing', !pitcherData.hasPitcherData);
@@ -156,7 +169,7 @@ class PitcherDisplay {
                     <img src="${imageUrl}"
                          alt="${pitcherData.name}"
                          title="${pitcherData.name}"
-                         onerror="this.src='${this.headshotFallbackUrl}'">
+                         onerror="${imageErrorHandler}">
                 </div>
                 <div class="pitcher-card-body">
                     <div class="pitcher-name">${pitcherData.name}</div>

@@ -968,148 +968,21 @@ class GameTableRow {
     }
 
     async loadPitcherHighlightImages() {
-        this.pitcherHighlightImages = { away: null, home: null };
-
-        if (this.game?.isFuture) {
-            this.pitcherHighlightImagesLoaded = true;
-            return;
-        }
-
-        const awayPitcherId = Number(this.game?.awayTeam?.pitcher?.id);
-        const homePitcherId = Number(this.game?.homeTeam?.pitcher?.id);
-        const hasAwayPitcher = Number.isFinite(awayPitcherId);
-        const hasHomePitcher = Number.isFinite(homePitcherId);
-
-        if (!hasAwayPitcher && !hasHomePitcher) {
-            this.pitcherHighlightImagesLoaded = true;
-            return;
-        }
-
-        try {
-            const gameContent = await API.apiRequest(`/game/${this.game.id}/content`);
-            const highlightItems = gameContent?.highlights?.highlights?.items;
-
-            if (Array.isArray(highlightItems)) {
-                for (const item of highlightItems) {
-                    if (!this.isPitcherActionHighlight(item)) {
-                        continue;
-                    }
-
-                    const imageUrl = this.extractHighlightImageUrl(item);
-                    if (!imageUrl) continue;
-
-                    const linkedPlayerIds = this.extractHighlightPlayerIds(item);
-                    if (!linkedPlayerIds.size) continue;
-
-                    if (!this.pitcherHighlightImages.away && hasAwayPitcher && linkedPlayerIds.has(awayPitcherId)) {
-                        this.pitcherHighlightImages.away = imageUrl;
-                    }
-
-                    if (!this.pitcherHighlightImages.home && hasHomePitcher && linkedPlayerIds.has(homePitcherId)) {
-                        this.pitcherHighlightImages.home = imageUrl;
-                    }
-
-                    const hasAllImages =
-                        (!hasAwayPitcher || this.pitcherHighlightImages.away) &&
-                        (!hasHomePitcher || this.pitcherHighlightImages.home);
-
-                    if (hasAllImages) {
-                        break;
-                    }
-                }
-            }
-        } catch (error) {
-            console.warn('Error loading pitcher highlight images:', error);
-        }
-
+        this.pitcherHighlightImages = {
+            away: this.getPitcherActionImageUrl(this.game?.awayTeam?.pitcher?.id),
+            home: this.getPitcherActionImageUrl(this.game?.homeTeam?.pitcher?.id)
+        };
         this.pitcherHighlightImagesLoaded = true;
     }
 
-    extractHighlightPlayerIds(highlightItem) {
-        const keywords = this.extractHighlightKeywords(highlightItem);
+    getPitcherActionImageUrl(pitcherId) {
+        const normalizedPitcherId = Number(pitcherId);
 
-        const playerIds = new Set();
-
-        keywords.forEach((keyword) => {
-            const keywordType = String(keyword?.type || '').toLowerCase();
-            const keywordValue = Number(keyword?.value);
-
-            if (!Number.isFinite(keywordValue)) {
-                return;
-            }
-
-            if (keywordType.includes('player_id') || keywordType.includes('playerid') || keywordType.includes('mlbam')) {
-                playerIds.add(keywordValue);
-            }
-        });
-
-        return playerIds;
-    }
-
-    extractHighlightKeywords(highlightItem) {
-        return [
-            ...(Array.isArray(highlightItem?.keywordsAll) ? highlightItem.keywordsAll : []),
-            ...(Array.isArray(highlightItem?.keywords) ? highlightItem.keywords : [])
-        ];
-    }
-
-    extractHighlightTaxonomyTags(highlightItem) {
-        const tags = new Set();
-        const keywords = this.extractHighlightKeywords(highlightItem);
-
-        keywords.forEach((keyword) => {
-            if (String(keyword?.type || '').toLowerCase() !== 'taxonomy') {
-                return;
-            }
-
-            const normalizedValue = String(keyword?.value || '').trim().toLowerCase();
-            if (normalizedValue) {
-                tags.add(normalizedValue);
-            }
-        });
-
-        return tags;
-    }
-
-    isPitcherActionHighlight(highlightItem) {
-        const itemType = String(highlightItem?.type || '').trim().toLowerCase();
-        if (itemType && itemType !== 'video') {
-            return false;
-        }
-
-        const taxonomyTags = this.extractHighlightTaxonomyTags(highlightItem);
-        if (!taxonomyTags.size) {
-            return false;
-        }
-
-        if (taxonomyTags.has('data-visualization')) {
-            return false;
-        }
-
-        const hasPitchingTag = taxonomyTags.has('pitching');
-        const hasInGameTag =
-            taxonomyTags.has('in-game-highlight') ||
-            taxonomyTags.has('game-action-tracking') ||
-            taxonomyTags.has('game-story-highlight') ||
-            taxonomyTags.has('highlight');
-
-        return hasPitchingTag && hasInGameTag;
-    }
-
-    extractHighlightImageUrl(highlightItem) {
-        const cuts = highlightItem?.image?.cuts;
-        const cutList = Array.isArray(cuts) ? cuts : Object.values(cuts || {});
-
-        if (!cutList.length) {
+        if (!Number.isFinite(normalizedPitcherId)) {
             return null;
         }
 
-        const preferredCut =
-            cutList.find((cut) => cut?.width === 640 && cut?.height === 360 && cut?.src) ||
-            cutList.find((cut) => cut?.aspectRatio === '16:9' && cut?.src) ||
-            cutList.find((cut) => cut?.src);
-
-        return preferredCut?.src || null;
+        return `https://img.mlbstatic.com/mlb-photos/image/upload/w_426,q_auto:best/v1/people/${normalizedPitcherId}/action/hero/current`;
     }
 
     renderPitchers(container) {

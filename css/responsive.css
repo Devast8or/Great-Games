@@ -41,11 +41,12 @@
     }
 
     .app-header-inner {
-        min-height: 66px;
+        min-height: 0;
     }
 
-    .brand-chip {
-        display: none;
+    .brand-logo {
+        height: clamp(72px, 12vw, 108px);
+        max-width: min(930px, 92vw);
     }
 
     .controls,
@@ -102,16 +103,13 @@
     }
 
     .app-header-inner {
-        min-height: 62px;
-        padding: 0.6rem 0;
+        min-height: 0;
+        padding: 0.06rem 0 0;
     }
 
-    .brand-block h1 {
-        font-size: 1.06rem;
-    }
-
-    .brand-block p {
-        font-size: 0.76rem;
+    .brand-logo {
+        height: clamp(60px, 18vw, 84px);
+        max-width: min(720px, 94vw);
     }
 
     .controls-head p,
