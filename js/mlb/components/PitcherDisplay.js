@@ -4,11 +4,40 @@
 import PitcherDetailPanel from './PitcherDetailPanel.js';
 
 class PitcherDisplay {
-    constructor(pitcher, teamType) {
+    constructor(pitcher, teamType, options = {}) {
         this.pitcher = pitcher;
         this.teamType = teamType;
+        this.displayImageUrl = options.displayImageUrl || null;
+        this.headshotFallbackUrl = 'assets/mlb/unknown-player-headshot.png';
         this.element = null;
         this.pitcherPanel = new PitcherDetailPanel(teamType);
+    }
+
+    getHeadshotUrl(pitcherId) {
+        return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pitcherId}/headshot/67/current`;
+    }
+
+    getPitcherDisplayData(pitcher = this.pitcher) {
+        const pitcherId = Number(pitcher?.id);
+
+        return {
+            hasPitcherData: Boolean(pitcher),
+            id: Number.isFinite(pitcherId) ? pitcherId : null,
+            name: pitcher?.name || 'Unknown Pitcher',
+            stats: pitcher?.stats || null
+        };
+    }
+
+    getDisplayImageUrl(pitcher) {
+        if (this.displayImageUrl) {
+            return this.displayImageUrl;
+        }
+
+        if (!pitcher?.id) {
+            return this.headshotFallbackUrl;
+        }
+
+        return this.getHeadshotUrl(pitcher?.id);
     }
 
     /**
@@ -18,25 +47,23 @@ class PitcherDisplay {
     render() {
         const container = document.createElement('div');
         container.className = `pitcher-container ${this.teamType}-pitcher-container`;
-        
-        if (!this.pitcher) {
-            container.classList.add('hidden');
-            this.element = container;
-            return container;
-        }
-        
-        const imageUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${this.pitcher.id}/headshot/67/current`;
+
+        const pitcherData = this.getPitcherDisplayData();
+        const imageUrl = this.getDisplayImageUrl(pitcherData);
+        container.classList.toggle('pitcher-data-missing', !pitcherData.hasPitcherData);
         
         container.innerHTML = `
             <div class="pitcher-img ${this.teamType}-pitcher-img">
                 <img src="${imageUrl}"
-                     alt="${this.pitcher.name}"
-                     title="${this.pitcher.name}"
-                     onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png'">
+                     alt="${pitcherData.name}"
+                     title="${pitcherData.name}"
+                     onerror="this.src='${this.headshotFallbackUrl}'">
             </div>
-            <div class="pitcher-name">${this.pitcher.name}</div>
-            <div class="pitcher-stats">
-                ${this.formatStats()}
+            <div class="pitcher-card-body">
+                <div class="pitcher-name">${pitcherData.name}</div>
+                <div class="pitcher-stats">
+                    ${this.formatStats(pitcherData)}
+                </div>
             </div>
         `;
         
@@ -100,10 +127,10 @@ class PitcherDisplay {
      * Format pitcher stats for display
      * @returns {string} - Formatted stats string
      */
-    formatStats() {
-        if (!this.pitcher.stats) return 'Stats not available';
-        
-        const stats = this.pitcher.stats;
+    formatStats(pitcher = this.pitcher) {
+        if (!pitcher?.stats) return 'Not Avaliable';
+
+        const stats = pitcher.stats;
         const hasSeason = Number(stats.wins) > 0 || Number(stats.losses) > 0;
         const winLoss = hasSeason ? `, ${stats.wins}-${stats.losses}` : '';
         
@@ -118,24 +145,24 @@ class PitcherDisplay {
         this.pitcher = newPitcher;
         if (this.element) {
             // Instead of replacing the entire element, just update its contents
-            if (!newPitcher) {
-                this.element.classList.add('hidden');
-                return;
-            }
-            
+            const pitcherData = this.getPitcherDisplayData(newPitcher);
+            const imageUrl = this.getDisplayImageUrl(pitcherData);
+
             this.element.classList.remove('hidden');
-            const imageUrl = `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${newPitcher.id}/headshot/67/current`;
+            this.element.classList.toggle('pitcher-data-missing', !pitcherData.hasPitcherData);
             
             this.element.innerHTML = `
                 <div class="pitcher-img ${this.teamType}-pitcher-img">
                     <img src="${imageUrl}"
-                         alt="${newPitcher.name}"
-                         title="${newPitcher.name}"
-                         onerror="this.src='https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png'">
+                         alt="${pitcherData.name}"
+                         title="${pitcherData.name}"
+                         onerror="this.src='${this.headshotFallbackUrl}'">
                 </div>
-                <div class="pitcher-name">${newPitcher.name}</div>
-                <div class="pitcher-stats">
-                    ${this.formatStats()}
+                <div class="pitcher-card-body">
+                    <div class="pitcher-name">${pitcherData.name}</div>
+                    <div class="pitcher-stats">
+                        ${this.formatStats(pitcherData)}
+                    </div>
                 </div>
             `;
         } else {

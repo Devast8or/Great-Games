@@ -4,9 +4,11 @@
 import PlayerDetailPanel from './PlayerDetailPanel.js';
 
 class LineupDisplay {
-    constructor(teamType, lineup = []) {
+    constructor(teamType, lineup = [], options = {}) {
         this.teamType = teamType;
-        this.lineup = lineup;
+        this.lineup = Array.isArray(lineup) ? lineup : [];
+        this.isLoading = Boolean(options.isLoading);
+        this.emptyStateText = options.emptyStateText || 'Not Avaliable';
         this.element = null;
         this.playerPanel = new PlayerDetailPanel(teamType);
         this.activePlayerId = null;
@@ -24,7 +26,7 @@ class LineupDisplay {
             <h4>${this.teamType === 'away' ? 'Away' : 'Home'} Lineup</h4>
         `;
         
-        if (this.lineup.length === 0) {
+        if (this.isLoading) {
             container.innerHTML += '<div class="lineup-loading">Loading lineup...</div>';
         } else {
             container.appendChild(this.createLineupTable());
@@ -40,12 +42,14 @@ class LineupDisplay {
      * @returns {number} - Performance score
      */
     calculatePerformanceScore(player) {
+        const playerStats = player?.stats || {};
+
         // Get base stats, defaulting to 0 if not available
-        const ops = parseFloat(player.stats.ops) || 0;
-        const hr = parseInt(player.stats.hr) || 0;
-        const rbi = parseInt(player.stats.rbi) || 0;
-        const avg = parseFloat(player.stats.avg) || 0;
-        const games = parseInt(player.stats.gamesPlayed) || 1;
+        const ops = parseFloat(playerStats.ops) || 0;
+        const hr = parseInt(playerStats.hr) || 0;
+        const rbi = parseInt(playerStats.rbi) || 0;
+        const avg = parseFloat(playerStats.avg) || 0;
+        const games = parseInt(playerStats.gamesPlayed) || 1;
         
         // Calculate weighted score - using OPS as primary factor with HR and RBI
         // Normalize RBI and HR by games played to avoid bias towards players who've played more games
@@ -79,6 +83,14 @@ class LineupDisplay {
         return withScores[0].player;
     }
 
+    getDisplayValue(value, fallback = '-') {
+        if (value === null || value === undefined || value === '') {
+            return fallback;
+        }
+
+        return value;
+    }
+
     /**
      * Create lineup table
      * @returns {HTMLElement} - Table element
@@ -101,6 +113,16 @@ class LineupDisplay {
                 <th>RBI</th>
             </tr>
         `;
+
+        if (!this.lineup || this.lineup.length === 0) {
+            const row = document.createElement('tr');
+            row.className = 'lineup-placeholder-row';
+            row.innerHTML = `
+                <td class="lineup-placeholder-cell" colspan="9">${this.emptyStateText}</td>
+            `;
+            table.appendChild(row);
+            return table;
+        }
         
         // Find the best player in the lineup
         const bestPlayer = this.findBestPlayer();
@@ -110,6 +132,7 @@ class LineupDisplay {
             const row = document.createElement('tr');
             row.className = 'player-row';
             row.dataset.playerId = player.id;
+            const playerStats = player?.stats || {};
             
             // Check if this is the best player
             const isBestPlayer = bestPlayer && player.id === bestPlayer.id;
@@ -128,12 +151,12 @@ class LineupDisplay {
                 </td>
                 <td>${player.position}</td>
                 <td>${player.name}</td>
-                <td>${player.stats.gamesPlayed}</td>
-                <td>${player.stats.avg}</td>
-                <td>${player.stats.obp}</td>
-                <td>${player.stats.ops}</td>
-                <td>${player.stats.hr}</td>
-                <td>${player.stats.rbi}</td>
+                <td>${this.getDisplayValue(playerStats.gamesPlayed)}</td>
+                <td>${this.getDisplayValue(playerStats.avg)}</td>
+                <td>${this.getDisplayValue(playerStats.obp)}</td>
+                <td>${this.getDisplayValue(playerStats.ops)}</td>
+                <td>${this.getDisplayValue(playerStats.hr)}</td>
+                <td>${this.getDisplayValue(playerStats.rbi)}</td>
             `;
 
             // Add click handler for player details
@@ -176,7 +199,8 @@ class LineupDisplay {
      * @param {Array} newLineup - New lineup data
      */
     update(newLineup) {
-        this.lineup = newLineup;
+        this.lineup = Array.isArray(newLineup) ? newLineup : [];
+        this.isLoading = false;
         if (this.element) {
             const newElement = this.render();
             this.element.parentNode.replaceChild(newElement, this.element);
@@ -188,6 +212,8 @@ class LineupDisplay {
      * Show loading state
      */
     showLoading() {
+        this.isLoading = true;
+
         if (this.element) {
             this.element.innerHTML = `
                 <h4>${this.teamType === 'away' ? 'Away' : 'Home'} Lineup</h4>
@@ -200,12 +226,16 @@ class LineupDisplay {
      * Show error state
      * @param {string} message - Error message
      */
-    showError(message = 'Error loading lineup') {
+    showError(message = 'Not Avaliable') {
+        this.isLoading = false;
+        this.emptyStateText = message || 'Not Avaliable';
+
         if (this.element) {
+            const fallbackTable = this.createLineupTable();
             this.element.innerHTML = `
                 <h4>${this.teamType === 'away' ? 'Away' : 'Home'} Lineup</h4>
-                <div class="error">${message}</div>
             `;
+            this.element.appendChild(fallbackTable);
         }
     }
 }

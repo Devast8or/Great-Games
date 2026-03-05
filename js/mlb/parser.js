@@ -5,23 +5,36 @@ import { API } from './api.js';
 import Utils from './utils.js';
 
 export class Parser {
+    static GAME_DAY_TIMEZONE = 'America/New_York';
+
     /**
      * Process API response data into a usable game format
      * @param {Object} apiData - Raw API response
+     * @param {Object} options - Processing options
      * @returns {Array} - Array of processed game objects
      */
-    static processGames(apiData) {
+    static processGames(apiData, options = {}) {
         if (!apiData.dates?.length) return [];
+
+        const targetPlayedDate = options?.targetPlayedDate || null;
         
         const games = [];
         
         apiData.dates.forEach(date => {
             if (!date.games?.length) return;
+
+            const scheduleDate = String(date?.date || '');
             
             date.games.forEach(game => {
                 if (game.status.abstractGameState === 'Final') {
                     try {
-                        games.push(this.processGameData(game));
+                        const playedDate = scheduleDate || this.getPlayedDate(game);
+
+                        if (targetPlayedDate && playedDate !== targetPlayedDate) {
+                            return;
+                        }
+
+                        games.push(this.processGameData(game, playedDate));
                     } catch (error) {
                         console.error(`Error processing game ${game.gamePk}:`, error);
                     }
@@ -34,20 +47,83 @@ export class Parser {
     }
 
     /**
+     * Format a datetime value into YYYY-MM-DD for a specific timezone.
+     * @param {string} dateValue - ISO date-time value
+     * @param {string} timeZone - IANA timezone name
+     * @returns {string|null} - Date in YYYY-MM-DD format
+     */
+    static getDateStringInTimeZone(dateValue, timeZone = this.GAME_DAY_TIMEZONE) {
+        if (!dateValue) {
+            return null;
+        }
+
+        const date = new Date(dateValue);
+        if (Number.isNaN(date.getTime())) {
+            return null;
+        }
+
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            const parts = formatter.formatToParts(date);
+            const year = parts.find((part) => part.type === 'year')?.value;
+            const month = parts.find((part) => part.type === 'month')?.value;
+            const day = parts.find((part) => part.type === 'day')?.value;
+
+            if (year && month && day) {
+                return `${year}-${month}-${day}`;
+            }
+        } catch (error) {
+            console.warn('Unable to format played date in configured timezone:', error);
+        }
+
+        return date.toISOString().split('T')[0];
+    }
+
+    /**
+     * Determine the canonical played date for a game.
+     * Uses MLB API schedule day semantics (`officialDate`) when available.
+     * @param {Object} game - Raw game data
+     * @returns {string} - Date in YYYY-MM-DD format
+     */
+    static getPlayedDate(game) {
+        const playedDate = this.getDateStringInTimeZone(game?.gameDate, this.GAME_DAY_TIMEZONE);
+        if (playedDate) {
+            return playedDate;
+        }
+
+        if (game?.officialDate) {
+            return String(game.officialDate);
+        }
+
+        return '';
+    }
+
+    /**
      * Process individual game data
      * @param {Object} game - Raw game data
+     * @param {string} playedDate - Canonical played date
      * @returns {Object} - Processed game object
      */
-    static processGameData(game) {
+    static processGameData(game, playedDate = '') {
         const awayTeam = game.teams.away;
         const homeTeam = game.teams.home;
+        const awayFinalScore = Number(awayTeam.score) || 0;
+        const homeFinalScore = Number(homeTeam.score) || 0;
+        const { awayDidWin, homeDidWin } = this.resolveTeamResults(awayTeam, homeTeam, awayFinalScore, homeFinalScore);
+        const awayRecord = this.derivePregameRecord(awayTeam.leagueRecord, awayDidWin, homeDidWin);
+        const homeRecord = this.derivePregameRecord(homeTeam.leagueRecord, homeDidWin, awayDidWin);
 
         // Process linescore data
         const innings = game.linescore?.innings || [];
         const leadChanges = this.countLeadChanges(innings, awayTeam.team.id, homeTeam.team.id);
         const isExtraInnings = innings.length > 9;
-        const totalRuns = awayTeam.score + homeTeam.score;
-        const runDifference = Math.abs(awayTeam.score - homeTeam.score);
+        const totalRuns = awayFinalScore + homeFinalScore;
+        const runDifference = Math.abs(awayFinalScore - homeFinalScore);
 
         // Extract hits and errors
         const awayHits = game.linescore?.teams?.away?.hits || 0;
@@ -59,7 +135,11 @@ export class Parser {
         const inningScores = innings.map(inning => ({
             inningNumber: inning.num,
             away: inning.away?.runs || 0,
-            home: inning.home?.runs || 0
+            home: inning.home?.runs || 0,
+            awayHits: inning.away?.hits || 0,
+            homeHits: inning.home?.hits || 0,
+            awayErrors: inning.away?.errors || 0,
+            homeErrors: inning.home?.errors || 0
         }));
 
         // Add late game drama properties
@@ -67,40 +147,40 @@ export class Parser {
         const isWalkoff = this.isWalkoffGame(game);
         
         // Calculate maximum lead for comeback detection
-        const { maxLead, comebackTeamId } = this.findMaximumLeadAndComeback(innings, awayTeam.team.id, homeTeam.team.id, awayTeam.score, homeTeam.score);
+        const { maxLead, comebackTeamId } = this.findMaximumLeadAndComeback(innings, awayTeam.team.id, homeTeam.team.id, awayFinalScore, homeFinalScore);
         const hasComebackWin = comebackTeamId !== null;
         
         return {
             id: game.gamePk,
             date: game.gameDate,
+            officialDate: game.officialDate || '',
+            playedDate: playedDate || this.getPlayedDate(game),
             status: game.status.detailedState,
+            gameType: game.gameType || 'R',
+            seriesDescription: game.seriesDescription || '',
+            seriesGameNumber: game.seriesGameNumber || null,
+            description: game.description || '',
             awayTeam: {
                 id: awayTeam.team.id,
                 name: awayTeam.team.name,
-                score: awayTeam.score,
+                score: awayFinalScore,
                 hits: awayHits,
                 errors: awayErrors,
                 pitcher: this.extractPitcher(awayTeam.probablePitcher),
                 lineup: [],
                 logoUrl: API.getTeamLogoUrl(awayTeam.team.id),
-                record: {
-                    wins: awayTeam.leagueRecord?.wins || 0,
-                    losses: awayTeam.leagueRecord?.losses || 0
-                }
+                record: awayRecord
             },
             homeTeam: {
                 id: homeTeam.team.id,
                 name: homeTeam.team.name,
-                score: homeTeam.score,
+                score: homeFinalScore,
                 hits: homeHits,
                 errors: homeErrors,
                 pitcher: this.extractPitcher(homeTeam.probablePitcher),
                 lineup: [],
                 logoUrl: API.getTeamLogoUrl(homeTeam.team.id),
-                record: {
-                    wins: homeTeam.leagueRecord?.wins || 0,
-                    losses: homeTeam.leagueRecord?.losses || 0
-                }
+                record: homeRecord
             },
             venue: game.venue?.name || 'Unknown Venue',
             innings: innings.length,
@@ -119,6 +199,65 @@ export class Parser {
             hasComebackWin,
             comebackTeamId
         };
+    }
+
+    /**
+     * Resolve winner/loser for a completed game using score first, then API winner flags.
+     * @param {Object} awayTeam - Away team payload from schedule API
+     * @param {Object} homeTeam - Home team payload from schedule API
+     * @param {number} awayFinalScore - Final away score
+     * @param {number} homeFinalScore - Final home score
+     * @returns {{awayDidWin: boolean, homeDidWin: boolean}}
+     */
+    static resolveTeamResults(awayTeam, homeTeam, awayFinalScore, homeFinalScore) {
+        if (awayFinalScore !== homeFinalScore) {
+            return {
+                awayDidWin: awayFinalScore > homeFinalScore,
+                homeDidWin: homeFinalScore > awayFinalScore
+            };
+        }
+
+        const awayWinnerFlag = awayTeam?.isWinner;
+        const homeWinnerFlag = homeTeam?.isWinner;
+
+        if (typeof awayWinnerFlag === 'boolean' && typeof homeWinnerFlag === 'boolean' && awayWinnerFlag !== homeWinnerFlag) {
+            return {
+                awayDidWin: awayWinnerFlag,
+                homeDidWin: homeWinnerFlag
+            };
+        }
+
+        return {
+            awayDidWin: false,
+            homeDidWin: false
+        };
+    }
+
+    /**
+     * Derive pre-game team record from post-game league record.
+     * @param {Object} leagueRecord - Team leagueRecord payload from schedule API
+     * @param {boolean} didWin - Whether team won this game
+     * @param {boolean} didLose - Whether team lost this game
+     * @returns {{wins: number, losses: number}}
+     */
+    static derivePregameRecord(leagueRecord, didWin, didLose) {
+        const wins = Number.parseInt(leagueRecord?.wins, 10);
+        const losses = Number.parseInt(leagueRecord?.losses, 10);
+
+        const normalizedRecord = {
+            wins: Number.isFinite(wins) ? wins : 0,
+            losses: Number.isFinite(losses) ? losses : 0
+        };
+
+        if (didWin) {
+            normalizedRecord.wins = Math.max(0, normalizedRecord.wins - 1);
+        }
+
+        if (didLose) {
+            normalizedRecord.losses = Math.max(0, normalizedRecord.losses - 1);
+        }
+
+        return normalizedRecord;
     }
 
     /**
@@ -199,7 +338,7 @@ export class Parser {
             if (!date.games?.length) return;
             
             date.games.forEach(game => {
-                if (['Preview', 'Scheduled'].includes(game.status.abstractGameState)) {
+                if (['Preview', 'Scheduled', 'Live'].includes(game.status.abstractGameState)) {
                     try {
                         games.push(this.processFutureGame(game));
                     } catch (error) {
@@ -225,7 +364,13 @@ export class Parser {
         return {
             id: game.gamePk,
             date: game.gameDate,
+            officialDate: game.officialDate || '',
+            playedDate: this.getDateStringInTimeZone(game.gameDate, this.GAME_DAY_TIMEZONE) || game.officialDate || '',
             status: game.status.detailedState,
+            gameType: game.gameType || 'R',
+            seriesDescription: game.seriesDescription || '',
+            seriesGameNumber: game.seriesGameNumber || null,
+            description: game.description || '',
             gameTime: new Date(game.gameDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
             isFuture: true,
             awayTeam: {
@@ -409,8 +554,17 @@ export class Parser {
         const gamesByDateAndTeams = {};
         
         games.forEach(game => {
-            // Format the date to YYYY-MM-DD to ensure consistent comparison
-            const gameDate = new Date(game.date).toISOString().split('T')[0];
+            // Prefer parsed played date to avoid timezone-driven day shifts.
+            const gameDate = String(
+                game.playedDate
+                || game.officialDate
+                || this.getDateStringInTimeZone(game.date, this.GAME_DAY_TIMEZONE)
+                || ''
+            );
+
+            if (!gameDate) {
+                return;
+            }
             
             // Create a consistent key for the teams regardless of home/away
             // Use both orderings to ensure we catch all duplicates
