@@ -97,6 +97,12 @@
 /* ==============================
    Large Mobile
 ============================== */
+@media (max-width: 992px) {
+    .standings-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 768px) {
     .container {
         width: min(1720px, calc(100% - 1rem));
@@ -323,6 +329,12 @@
 }
 
 /* Large Mobile */
+@media (max-width: 992px) {
+    .standings-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 768px) {
     #games-list {
         grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
@@ -501,6 +513,12 @@
 }
 
 /* Box score table responsive styles */
+@media (max-width: 992px) {
+    .standings-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 768px) {
     .score {
         padding: 0.25rem;
@@ -658,6 +676,12 @@
     }
 }
 
+@media (max-width: 992px) {
+    .standings-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 768px) {
     .filter-container {
         flex-direction: column;
@@ -723,6 +747,12 @@
     }
 
     .game-details-content .lineups-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 992px) {
+    .standings-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -847,6 +877,12 @@
     }
 }
 
+@media (max-width: 992px) {
+    .standings-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 768px) {
     .table-toolbar {
         align-items: flex-end;
@@ -884,6 +920,10 @@
     }
 
     .filters-modal .filter-container {
+        grid-template-columns: 1fr;
+    }
+
+    body.sport-nba #filters-modal .filter-container {
         grid-template-columns: 1fr;
     }
 
@@ -938,5 +978,50 @@
 
     .period-filter-team-options {
         max-height: 152px;
+    }
+}
+
+@media (max-width: 992px) {
+    .sport-switcher {
+        padding: 0.18rem;
+    }
+
+    .sport-switch-btn {
+        padding: 0.38rem 0.72rem;
+        font-size: 0.69rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .standings-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-header-inner {
+        align-items: center;
+        gap: 0.55rem;
+    }
+
+    .sport-switcher {
+        margin-left: auto;
+    }
+
+    body.sport-mlb .brand-logo,
+    body.sport-nba .brand-logo {
+        max-width: min(160px, 40vw);
+    }
+}
+
+@media (max-width: 560px) {
+    .sport-switcher {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .sport-switch-btn {
+        flex: 1 1 0;
+        text-align: center;
     }
 }

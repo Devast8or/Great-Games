@@ -2784,6 +2784,170 @@ body.modal-open {
     max-height: calc(100vh - 2rem);
 }
 
+.standings-modal-panel {
+    width: min(1040px, calc(100vw - 2rem));
+}
+
+.standings-modal-heading {
+    display: grid;
+    gap: 0.18rem;
+}
+
+.standings-modal-subtitle {
+    color: var(--text-soft);
+    font-size: 0.76rem;
+    line-height: 1.4;
+}
+
+.standings-modal-content {
+    display: grid;
+    gap: 0.8rem;
+    padding: 0.9rem;
+}
+
+.standings-table-state {
+    padding: 1rem;
+    border-radius: 14px;
+    border: 1px solid rgba(137, 187, 230, 0.22);
+    background: rgba(8, 25, 40, 0.72);
+    color: var(--text-soft);
+    text-align: center;
+}
+
+.standings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+
+.standings-conference {
+    overflow: hidden;
+    border: 1px solid rgba(137, 187, 230, 0.24);
+}
+
+.standings-conference h4 {
+    padding: 0.82rem 0.92rem 0;
+    color: #b7d4ee;
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.standings-table-scroll {
+    overflow: auto;
+    padding: 0.72rem 0.92rem 0.92rem;
+}
+
+.standings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+}
+
+.standings-table th,
+.standings-table td {
+    padding: 0.46rem 0.4rem;
+    border-bottom: 1px solid rgba(137, 187, 230, 0.16);
+    text-align: center;
+    color: #dceefe;
+}
+
+.standings-table th {
+    color: #9fd6ff;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: rgba(2, 12, 20, 0.48);
+}
+
+.standings-table th:nth-child(2),
+.standings-table td:nth-child(2),
+.standings-table th:nth-child(7),
+.standings-table td:nth-child(7) {
+    text-align: left;
+}
+
+.standings-team-cell {
+    display: grid;
+    gap: 0.08rem;
+}
+
+.standings-team-name {
+    font-weight: 700;
+}
+
+.standings-team-abbr {
+    color: var(--text-soft);
+    font-size: 0.69rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.standings-row-highlight td {
+    background: rgba(255, 120, 71, 0.08);
+}
+
+.standings-row-highlight:hover td {
+    background: rgba(255, 120, 71, 0.14);
+}
+
+.standings-row-highlight-game-1 td {
+    background: rgba(255, 120, 71, 0.12);
+}
+
+.standings-row-highlight-game-1:hover td {
+    background: rgba(255, 120, 71, 0.18);
+}
+
+.standings-row-highlight-game-2 td {
+    background: rgba(255, 194, 71, 0.12);
+}
+
+.standings-row-highlight-game-2:hover td {
+    background: rgba(255, 194, 71, 0.18);
+}
+
+.standings-row-highlight-game-3 td {
+    background: rgba(83, 212, 163, 0.12);
+}
+
+.standings-row-highlight-game-3:hover td {
+    background: rgba(83, 212, 163, 0.18);
+}
+
+.standings-team-highlight {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    margin-top: 0.18rem;
+    padding: 0.14rem 0.44rem;
+    border-radius: 999px;
+    background: rgba(255, 120, 71, 0.16);
+    border: 1px solid rgba(255, 120, 71, 0.3);
+    color: #ffd8cc;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.standings-team-highlight-game-1 {
+    background: rgba(255, 120, 71, 0.18);
+    border-color: rgba(255, 120, 71, 0.36);
+    color: #ffe1d6;
+}
+
+.standings-team-highlight-game-2 {
+    background: rgba(255, 194, 71, 0.18);
+    border-color: rgba(255, 194, 71, 0.34);
+    color: #fff0c8;
+}
+
+.standings-team-highlight-game-3 {
+    background: rgba(83, 212, 163, 0.18);
+    border-color: rgba(83, 212, 163, 0.34);
+    color: #d8fff0;
+}
 .period-filter-content {
     display: grid;
     gap: 0.72rem;
@@ -4270,4 +4434,98 @@ body.modal-open {
 .pitcher-detail-panel .no-data,
 .pitcher-detail-panel .error {
     color: var(--text-soft) !important;
+}
+
+/* ==============================
+   Multi-Sport Shell
+============================== */
+.sport-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem;
+    border-radius: 999px;
+    border: 1px solid rgba(137, 187, 230, 0.24);
+    background: rgba(6, 18, 31, 0.88);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.sport-switch-btn {
+    border: none;
+    border-radius: 999px;
+    padding: 0.42rem 0.88rem;
+    background: transparent;
+    color: var(--text-soft);
+    font-size: 0.72rem;
+    font-weight: 780;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.sport-switch-btn:hover {
+    color: #dff0ff;
+    background: rgba(53, 213, 255, 0.12);
+}
+
+.sport-switch-btn.active {
+    color: #061a28;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.sport-switch-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(53, 213, 255, 0.35);
+}
+
+body.sport-nba {
+    --accent: #ff7847;
+    --accent-strong: #ff3f34;
+    --accent-warm: #ffc247;
+}
+
+body.sport-mlb .brand-logo,
+body.sport-nba .brand-logo {
+    height: clamp(66px, 8vw, 118px);
+    width: auto;
+    max-width: min(260px, 32vw);
+}
+
+body.sport-nba .games-container.panel-surface::before {
+    background-image: url('https://cdn.nba.com/logos/leagues/logo-nba.svg');
+    opacity: 0.1;
+    background-size: clamp(150px, 24vw, 250px) auto;
+}
+
+body.sport-mlb #open-standings {
+    display: none;
+}
+
+body.sport-nba .settings-inline-icon {
+    color: #ffd8cc;
+}
+
+/* Keep NBA ranking settings compact since only a few criteria are shown. */
+body.sport-nba #filters-modal {
+    padding: clamp(0.7rem, 2vw, 1.1rem);
+}
+
+body.sport-nba #filters-modal .filters-modal-panel {
+    width: min(700px, calc(100vw - 2rem));
+    margin-inline: auto;
+}
+
+body.sport-nba #filters-modal .filter-content {
+    padding: 0.78rem;
+}
+
+body.sport-nba #filters-modal .filter-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.62rem;
+}
+
+body.sport-nba #filters-modal .filter-category {
+    padding: 0.74rem;
 }
