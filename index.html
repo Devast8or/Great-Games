@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLB Great Games - Watch Without Spoilers</title>
+    <title>Great Games - Watch Without Spoilers</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/responsive.css">
 </head>
@@ -11,8 +11,13 @@
     <header class="app-header">
         <div class="container app-header-inner">
             <div class="brand-block">
-                <img class="brand-logo" src="assets/mlb/MLBGreatGamesLogo.png" alt="MLB Great Games">
+                <img id="brand-logo" class="brand-logo" src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg" alt="Major League Baseball">
             </div>
+
+            <nav id="sport-switcher" class="sport-switcher" aria-label="Select sport">
+                <button type="button" class="sport-switch-btn" data-sport="mlb" aria-pressed="true">MLB</button>
+                <button type="button" class="sport-switch-btn" data-sport="nba" aria-pressed="false">NBA</button>
+            </nav>
         </div>
     </header>
 
@@ -31,6 +36,10 @@
                             <span class="settings-inline-icon" aria-hidden="true">F</span>
                         </button>
 
+                        <button id="open-standings" class="settings-inline-btn" aria-label="Open NBA standings" aria-haspopup="dialog" aria-controls="standings-modal" aria-expanded="false">
+                            <span class="settings-inline-label">Standings</span>
+                            <span class="settings-inline-icon" aria-hidden="true">S</span>
+                        </button>
                         <button id="toggle-filters" class="settings-inline-btn" aria-label="Open ranking criteria settings" aria-haspopup="dialog" aria-controls="filters-modal" aria-expanded="false">
                             <span class="settings-inline-label">Ranking</span>
                             <span class="settings-inline-icon" aria-hidden="true">⚙</span>
@@ -94,6 +103,21 @@
                     </div>
                 </div>
 
+                <div id="standings-modal" class="filters-modal hidden" role="dialog" aria-modal="true" aria-labelledby="standings-modal-title">
+                    <div class="filters-modal-panel panel-surface standings-modal-panel">
+                        <div class="filters-modal-header">
+                            <div class="standings-modal-heading">
+                                <h3 id="standings-modal-title">NBA Standings</h3>
+                                <p id="standings-modal-subtitle" class="standings-modal-subtitle">Season standings for the selected date.</p>
+                            </div>
+                            <button id="close-standings-modal" class="filters-modal-close" aria-label="Close NBA standings">&times;</button>
+                        </div>
+                        <div class="standings-modal-content">
+                            <div id="standings-table-state" class="standings-table-state">Standings are hidden by default. Open this table any time for the selected date.</div>
+                            <div id="standings-table-container" class="standings-grid hidden"></div>
+                        </div>
+                    </div>
+                </div>
                 <div id="filters-modal" class="filters-modal hidden" role="dialog" aria-modal="true" aria-labelledby="filters-modal-title">
                     <div class="filters-modal-panel panel-surface">
                         <div class="filters-modal-header">
@@ -276,8 +300,8 @@
 
     <footer class="app-footer">
         <div class="container">
-            <p>MLB Great Games • Spoiler-free baseball viewing</p>
-            <p>Data provided by MLB Stats API</p>
+            <p id="footer-primary">MLB Great Games • Spoiler-free baseball viewing</p>
+            <p id="footer-secondary">Data provided by MLB Stats API</p>
         </div>
     </footer>
     
@@ -309,6 +333,6 @@
     </template>
 
     <!-- Scripts -->
-    <script type="module" src="js/mlb/app.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>

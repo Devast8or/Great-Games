@@ -1,14 +1,14 @@
 /**
- * Main application entry point
+ * Main NBA application entry point.
  */
 import UI from './ui.js';
 
 let isInitialized = false;
 
 /**
- * Initialize MLB mode.
+ * Initialize NBA mode.
  */
-export function initMlbApp() {
+export function initNbaApp() {
     if (isInitialized) {
         return;
     }
@@ -17,19 +17,19 @@ export function initMlbApp() {
 
     UI.init();
 
-    window.addEventListener('unhandledrejection', event => {
+    window.addEventListener('unhandledrejection', (event) => {
         if (event.reason && typeof event.reason === 'object' && event.reason.name === 'APIError') {
             UI.showError(`API Error: ${event.reason.message}`);
         }
     });
 
-    console.log('MLB Great Games application initialized');
+    console.log('NBA Great Games application initialized');
 }
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        initMlbApp();
+        initNbaApp();
     });
 } else {
-    initMlbApp();
+    initNbaApp();
 }
