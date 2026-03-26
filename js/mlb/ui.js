@@ -17,6 +17,12 @@ class UI {
             loading: document.getElementById('loading'),
             errorMessage: document.getElementById('error-message'),
             noGames: document.getElementById('no-games'),
+            standingsModal: document.getElementById('standings-modal'),
+            openStandingsBtn: document.getElementById('open-standings'),
+            closeStandingsBtn: document.getElementById('close-standings-modal'),
+            standingsModalSubtitle: document.getElementById('standings-modal-subtitle'),
+            standingsTableState: document.getElementById('standings-table-state'),
+            standingsTableContainer: document.getElementById('standings-table-container'),
             periodFilterModal: document.getElementById('period-filter-modal'),
             openPeriodFilterBtn: document.getElementById('open-period-filter'),
             closePeriodFilterBtn: document.getElementById('close-period-filter-modal'),
@@ -64,6 +70,11 @@ class UI {
         this.activePeriodFilter = null;
         this.knownTeams = new Map();
         this.mlbTeamIds = new Set();
+        this.standingsByTeamId = {};
+        this.standingsSeason = null;
+        this.standingsDateLabel = '';
+        this.standingsLoading = false;
+        this.standingsDisplayMode = 'divisions';
     }
 
     /**
@@ -129,6 +140,7 @@ class UI {
         
         this.ensureModalHost(this.elements.filtersContainer);
         this.ensureModalHost(this.elements.periodFilterModal);
+        this.ensureModalHost(this.elements.standingsModal);
 
         if (this.elements.toggleFiltersBtn) {
             this.elements.toggleFiltersBtn.addEventListener('click', () => this.toggleFiltersPanel(true));
@@ -142,6 +154,22 @@ class UI {
             this.elements.filtersContainer.addEventListener('click', (event) => {
                 if (event.target === this.elements.filtersContainer) {
                     this.toggleFiltersPanel(false);
+                }
+            });
+        }
+
+        if (this.elements.openStandingsBtn) {
+            this.elements.openStandingsBtn.addEventListener('click', () => this.toggleStandingsModal(true));
+        }
+
+        if (this.elements.closeStandingsBtn) {
+            this.elements.closeStandingsBtn.addEventListener('click', () => this.toggleStandingsModal(false));
+        }
+
+        if (this.elements.standingsModal) {
+            this.elements.standingsModal.addEventListener('click', (event) => {
+                if (event.target === this.elements.standingsModal) {
+                    this.toggleStandingsModal(false);
                 }
             });
         }
@@ -199,6 +227,11 @@ class UI {
 
             if (this.isTeamPickerOpen()) {
                 this.toggleTeamPickerList(false);
+                return;
+            }
+
+            if (this.isModalOpen(this.elements.standingsModal)) {
+                this.toggleStandingsModal(false);
                 return;
             }
 
@@ -705,6 +738,8 @@ class UI {
             return;
         }
 
+        this.setStandingsLoadingState(date, API.inferSeasonFromDate(date));
+
         if (this.activePeriodFilter) {
             await this.loadFilteredGames(date, this.activePeriodFilter);
             return;
@@ -754,7 +789,9 @@ class UI {
      */
     async createCompletedGamesFromData(gamesData, standingsDate, parserOptions = {}) {
         const standingsData = await API.fetchStandings(standingsDate);
+        const standingsByTeamId = API.mapStandingsByTeam(standingsData);
         const teamRankings = API.processTeamRankings(standingsData);
+        this.updateStandingsData(standingsByTeamId, API.inferSeasonFromDate(standingsDate), standingsDate);
         this.registerMlbTeamIds(teamRankings);
         let games = Parser.processGames(gamesData, parserOptions);
 
@@ -854,9 +891,11 @@ class UI {
             this.registerTeamsFromGames(games);
             this.games = games;
             this.isFutureGames = false;
+            this.renderStandingsTable();
             this.displayGames();
         } catch (error) {
             console.error('Error loading games:', error);
+            this.markStandingsUnavailable(date, API.inferSeasonFromDate(date));
             this.showError(error.message || 'Failed to load games');
             this.hideLoading();
         }
@@ -877,6 +916,7 @@ class UI {
             ]);
 
             const teamRankings = API.processTeamRankings(standingsData);
+            this.updateStandingsData(API.mapStandingsByTeam(standingsData), API.inferSeasonFromDate(date), date);
             this.registerMlbTeamIds(teamRankings);
 
             let completedGames = Parser.processGames(gamesData, {
@@ -893,9 +933,11 @@ class UI {
             this.registerTeamsFromGames(games);
             this.games = games;
             this.isFutureGames = true;
+            this.renderStandingsTable();
             this.displayGames();
         } catch (error) {
             console.error('Error loading current-day games:', error);
+            this.markStandingsUnavailable(date, API.inferSeasonFromDate(date));
             this.showError(error.message || 'Failed to load current-day games');
             this.hideLoading();
         }
@@ -914,6 +956,7 @@ class UI {
             ]);
 
             const teamRankings = API.processTeamRankings(standingsData);
+            this.updateStandingsData(API.mapStandingsByTeam(standingsData), API.inferSeasonFromDate(date), date);
             this.registerMlbTeamIds(teamRankings);
             const games = Parser.processFutureGames(gamesData);
 
@@ -922,9 +965,11 @@ class UI {
             this.registerTeamsFromGames(games);
             this.games = games;
             this.isFutureGames = true;
+            this.renderStandingsTable();
             this.displayGames();
         } catch (error) {
             console.error('Error loading future games:', error);
+            this.markStandingsUnavailable(date, API.inferSeasonFromDate(date));
             this.showError(error.message || 'Failed to load future games');
             this.hideLoading();
         }
@@ -1095,6 +1140,7 @@ class UI {
 
         try {
             this.showLoading();
+            this.setStandingsLoadingState(anchorDate, API.inferSeasonFromDate(anchorDate));
 
             const gamesData = await API.fetchGamesInRange(range.startDate, range.endDate);
             let games = await this.createCompletedGamesFromData(gamesData, anchorDate);
@@ -1129,11 +1175,13 @@ class UI {
 
             this.games = games;
             this.isFutureGames = false;
+            this.renderStandingsTable();
             this.displayGames();
 
             return true;
         } catch (error) {
             console.error('Error loading filtered games:', error);
+            this.markStandingsUnavailable(anchorDate, API.inferSeasonFromDate(anchorDate));
             this.showError(error.message || 'Failed to apply game filter');
             this.hideLoading();
             return false;
@@ -1193,6 +1241,511 @@ class UI {
 
         this.elements.activePeriodFilterText.textContent = `Filtered: ${labelParts.join(' | ')}`;
         this.elements.activePeriodFilterBadge.classList.remove('hidden');
+    }
+
+    setStandingsLoadingState(dateLabel = '', season = null) {
+        this.standingsLoading = true;
+        this.standingsByTeamId = {};
+        this.standingsDateLabel = String(dateLabel || this.elements.gameDate?.value || '').trim();
+
+        const parsedSeason = Number.parseInt(season, 10);
+        this.standingsSeason = Number.isFinite(parsedSeason) && parsedSeason > 0
+            ? parsedSeason
+            : null;
+
+        this.renderStandingsTable();
+    }
+
+    updateStandingsData(standingsByTeamId = {}, season = null, dateLabel = '') {
+        this.standingsLoading = false;
+        this.standingsByTeamId = standingsByTeamId && typeof standingsByTeamId === 'object'
+            ? standingsByTeamId
+            : {};
+        this.standingsDateLabel = String(dateLabel || this.elements.gameDate?.value || '').trim();
+
+        const parsedSeason = Number.parseInt(season, 10);
+        this.standingsSeason = Number.isFinite(parsedSeason) && parsedSeason > 0
+            ? parsedSeason
+            : API.inferSeasonFromDate(this.standingsDateLabel);
+
+        this.renderStandingsTable();
+    }
+
+    markStandingsUnavailable(dateLabel = '', season = null) {
+        this.standingsLoading = false;
+        this.standingsByTeamId = {};
+        this.standingsDateLabel = String(dateLabel || this.elements.gameDate?.value || '').trim();
+
+        const parsedSeason = Number.parseInt(season, 10);
+        this.standingsSeason = Number.isFinite(parsedSeason) && parsedSeason > 0
+            ? parsedSeason
+            : API.inferSeasonFromDate(this.standingsDateLabel);
+
+        this.renderStandingsTable();
+    }
+
+    normalizeLeagueLabel(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized.includes('american')) {
+            return 'American League';
+        }
+
+        if (normalized.includes('national')) {
+            return 'National League';
+        }
+
+        return normalized ? String(value).trim() : 'League';
+    }
+
+    formatSeasonLabel(seasonValue) {
+        const season = Number.parseInt(seasonValue, 10);
+        if (!Number.isFinite(season) || season <= 0) {
+            return '';
+        }
+
+        return String(season);
+    }
+
+    normalizeStandingsDisplayMode(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === 'leagues') {
+            return normalized;
+        }
+
+        return 'divisions';
+    }
+
+    renderStandingsLeagueFilterControl() {
+        if (!this.elements.standingsTableState || !this.elements.standingsTableContainer) {
+            return;
+        }
+
+        const standingsContent = this.elements.standingsTableState.parentElement;
+        if (!standingsContent) {
+            return;
+        }
+
+        let control = standingsContent.querySelector('.standings-league-switch');
+        if (!control) {
+            control = document.createElement('div');
+            control.className = 'standings-league-switch';
+            control.setAttribute('role', 'group');
+            control.setAttribute('aria-label', 'Standings league filter');
+
+            [
+                { value: 'divisions', label: 'Divisions' },
+                { value: 'leagues', label: 'Leagues' }
+            ].forEach((option) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'standings-league-btn';
+                button.dataset.standingsMode = option.value;
+                button.textContent = option.label;
+                button.addEventListener('click', () => {
+                    const nextMode = this.normalizeStandingsDisplayMode(option.value);
+                    if (this.standingsDisplayMode === nextMode) {
+                        return;
+                    }
+
+                    this.standingsDisplayMode = nextMode;
+                    this.renderStandingsTable();
+                });
+                control.appendChild(button);
+            });
+
+            standingsContent.insertBefore(control, this.elements.standingsTableState);
+        }
+
+        const activeMode = this.normalizeStandingsDisplayMode(this.standingsDisplayMode);
+        control.querySelectorAll('.standings-league-btn').forEach((button) => {
+            const isActive = button.dataset.standingsMode === activeMode;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    buildStandingsHighlightMap() {
+        if (!Array.isArray(this.games) || this.games.length === 0) {
+            return new Map();
+        }
+
+        const rankingOptions = this.getRankingOptions();
+        let displayGames = this.games;
+
+        if (!this.isFutureGames) {
+            displayGames = Ranker.rankGames(this.games, rankingOptions);
+
+            if (this.activePeriodFilter) {
+                const minimumStars = this.normalizeMinimumStars(
+                    this.activePeriodFilter.minimumStars ?? this.activePeriodFilter.minStars
+                );
+
+                displayGames = displayGames.filter((game) => (
+                    this.getStarValueFromExcitementScore(game?.excitementScore) >= minimumStars
+                ));
+            }
+        } else if (this.isMixedScheduleView(displayGames)) {
+            const completedGames = displayGames.filter((game) => !game?.isFuture);
+            const rankedCompletedGames = Ranker.rankGames(completedGames, rankingOptions);
+            const rankedById = new Map();
+
+            rankedCompletedGames.forEach((game) => {
+                rankedById.set(Number(game.id), game);
+            });
+
+            displayGames = displayGames.map((game) => rankedById.get(Number(game.id)) || game);
+        }
+
+        return displayGames.slice(0, 3).reduce((highlights, game, index) => {
+            const gameNumber = index + 1;
+            const awayTeamId = Number.parseInt(game?.awayTeam?.id, 10);
+            const homeTeamId = Number.parseInt(game?.homeTeam?.id, 10);
+
+            [awayTeamId, homeTeamId]
+                .filter((teamId) => Number.isFinite(teamId) && teamId > 0)
+                .forEach((teamId) => {
+                    const key = String(teamId);
+                    if (!highlights.has(key)) {
+                        highlights.set(key, []);
+                    }
+
+                    highlights.get(key).push({ gameNumber });
+                });
+
+            return highlights;
+        }, new Map());
+    }
+
+    buildStandingsRows() {
+        const highlightsByTeamId = this.buildStandingsHighlightMap();
+
+        return Object.entries(this.standingsByTeamId || {})
+            .map(([teamId, standing]) => {
+                const numericTeamId = Number.parseInt(standing?.teamId ?? teamId, 10);
+                if (!Number.isFinite(numericTeamId) || numericTeamId <= 0) {
+                    return null;
+                }
+
+                const divisionRank = Number.parseInt(standing?.divisionRank, 10);
+                const wins = Number.parseInt(standing?.wins, 10);
+                const losses = Number.parseInt(standing?.losses, 10);
+
+                return {
+                    teamId: numericTeamId,
+                    teamName: String(standing?.teamName || '').trim(),
+                    abbreviation: String(standing?.abbreviation || '').trim(),
+                    conference: this.normalizeLeagueLabel(standing?.conference),
+                    division: String(standing?.division || '').trim(),
+                    divisionRank: Number.isFinite(divisionRank) && divisionRank > 0 ? divisionRank : Number.MAX_SAFE_INTEGER,
+                    wins: Number.isFinite(wins) ? wins : 0,
+                    losses: Number.isFinite(losses) ? losses : 0,
+                    highlights: highlightsByTeamId.get(String(numericTeamId)) || []
+                };
+            })
+            .filter(Boolean)
+            .sort((left, right) => {
+                if (left.conference !== right.conference) {
+                    return left.conference.localeCompare(right.conference);
+                }
+
+                if (left.division !== right.division) {
+                    return left.division.localeCompare(right.division);
+                }
+
+                if (left.divisionRank !== right.divisionRank) {
+                    return left.divisionRank - right.divisionRank;
+                }
+
+                if (left.wins !== right.wins) {
+                    return right.wins - left.wins;
+                }
+
+                return left.teamName.localeCompare(right.teamName);
+            });
+    }
+
+    createStandingsSection(title, rows) {
+        const section = document.createElement('section');
+        section.className = 'standings-conference panel-surface';
+
+        const heading = document.createElement('h4');
+        heading.textContent = title;
+        section.appendChild(heading);
+
+        const tableScroll = document.createElement('div');
+        tableScroll.className = 'standings-table-scroll';
+
+        const table = document.createElement('table');
+        table.className = 'standings-table';
+
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        ['#', 'Team'].forEach((label) => {
+            const th = document.createElement('th');
+            th.textContent = label;
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+        rows.forEach((row) => {
+            const tr = document.createElement('tr');
+            const primaryHighlight = row.highlights.reduce((best, highlight) => (
+                !best || highlight.gameNumber < best.gameNumber ? highlight : best
+            ), null);
+
+            if (primaryHighlight) {
+                tr.classList.add('standings-row-highlight');
+                if (primaryHighlight?.gameNumber) {
+                    tr.classList.add(`standings-row-highlight-game-${primaryHighlight.gameNumber}`);
+                }
+            }
+
+            const rankCell = document.createElement('td');
+            rankCell.textContent = row.divisionRank === Number.MAX_SAFE_INTEGER ? '--' : String(row.divisionRank);
+            tr.appendChild(rankCell);
+
+            const teamCell = document.createElement('td');
+            const teamCellWrap = document.createElement('div');
+            teamCellWrap.className = 'standings-team-cell';
+
+            const teamName = document.createElement('span');
+            teamName.className = 'standings-team-name';
+            teamName.textContent = row.teamName;
+
+            const badgeSlot = document.createElement('span');
+            badgeSlot.className = 'standings-team-badge-slot';
+
+            const highlightBadge = document.createElement('span');
+            if (primaryHighlight?.gameNumber) {
+                highlightBadge.className = `standings-team-highlight standings-team-highlight-game-${primaryHighlight.gameNumber}`;
+                const highlightNumber = document.createElement('span');
+                highlightNumber.className = 'standings-team-highlight-number';
+                highlightNumber.textContent = String(primaryHighlight.gameNumber);
+                highlightBadge.appendChild(highlightNumber);
+                highlightBadge.setAttribute('aria-label', `Top game rank ${primaryHighlight.gameNumber}`);
+            } else {
+                highlightBadge.className = 'standings-team-highlight standings-team-highlight-empty';
+                highlightBadge.setAttribute('aria-hidden', 'true');
+            }
+            badgeSlot.appendChild(highlightBadge);
+
+            const teamAbbreviation = document.createElement('span');
+            teamAbbreviation.className = 'standings-team-abbr';
+            teamAbbreviation.textContent = row.abbreviation;
+
+            teamCellWrap.appendChild(teamName);
+            teamCellWrap.appendChild(teamAbbreviation);
+            teamCellWrap.appendChild(badgeSlot);
+
+            teamCell.appendChild(teamCellWrap);
+            tr.appendChild(teamCell);
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        tableScroll.appendChild(table);
+        section.appendChild(tableScroll);
+
+        return section;
+    }
+
+    renderStandingsTable() {
+        this.renderStandingsLeagueFilterControl();
+
+        if (this.elements.standingsModalSubtitle) {
+            const subtitleParts = [];
+            if (this.standingsDateLabel) {
+                subtitleParts.push(`Selected date: ${this.standingsDateLabel}`);
+            }
+
+            const seasonLabel = this.formatSeasonLabel(this.standingsSeason);
+            if (seasonLabel) {
+                subtitleParts.push(`Season: ${seasonLabel}`);
+            }
+
+            this.elements.standingsModalSubtitle.textContent = subtitleParts.length > 0
+                ? subtitleParts.join(' | ')
+                : 'Season standings for the selected date.';
+        }
+
+        if (!this.elements.standingsTableContainer || !this.elements.standingsTableState) {
+            return;
+        }
+
+        this.elements.standingsTableContainer.innerHTML = '';
+
+        const standingsRows = this.buildStandingsRows();
+        if (this.standingsLoading) {
+            this.elements.standingsTableState.textContent = 'Loading MLB standings...';
+            this.elements.standingsTableState.classList.remove('hidden');
+            this.elements.standingsTableContainer.classList.add('hidden');
+            return;
+        }
+
+        if (standingsRows.length === 0) {
+            this.elements.standingsTableState.textContent = 'MLB standings are unavailable for the selected date.';
+            this.elements.standingsTableState.classList.remove('hidden');
+            this.elements.standingsTableContainer.classList.add('hidden');
+            return;
+        }
+
+        const displayMode = this.normalizeStandingsDisplayMode(this.standingsDisplayMode);
+        const conferenceOrder = ['American League', 'National League', 'League'];
+        const divisionOrder = ['AL East', 'AL Central', 'AL West', 'NL East', 'NL Central', 'NL West'];
+        const getLeagueColumnOrder = (leagueLabel) => {
+            const normalized = String(leagueLabel || '').toLowerCase();
+            if (normalized.includes('american')) {
+                return 0;
+            }
+
+            if (normalized.includes('national')) {
+                return 1;
+            }
+
+            return 2;
+        };
+
+        let orderedGroups = [];
+
+        if (displayMode === 'leagues') {
+            this.elements.standingsTableContainer.classList.add('standings-grid-leagues');
+
+            const groupedByLeague = standingsRows.reduce((groups, row) => {
+                const conferenceLabel = row.conference || 'League';
+                if (!groups.has(conferenceLabel)) {
+                    groups.set(conferenceLabel, {
+                        conference: conferenceLabel,
+                        rows: []
+                    });
+                }
+
+                groups.get(conferenceLabel).rows.push(row);
+                return groups;
+            }, new Map());
+
+            orderedGroups = Array.from(groupedByLeague.values())
+                .map((group) => ({
+                    title: group.conference,
+                    rows: group.rows.slice().sort((left, right) => {
+                        if (left.wins !== right.wins) {
+                            return right.wins - left.wins;
+                        }
+
+                        if (left.losses !== right.losses) {
+                            return left.losses - right.losses;
+                        }
+
+                        if (left.divisionRank !== right.divisionRank) {
+                            return left.divisionRank - right.divisionRank;
+                        }
+
+                        return left.teamName.localeCompare(right.teamName);
+                    })
+                }))
+                .sort((left, right) => {
+                    const leftLeagueOrder = getLeagueColumnOrder(left.title);
+                    const rightLeagueOrder = getLeagueColumnOrder(right.title);
+
+                    if (leftLeagueOrder !== rightLeagueOrder) {
+                        return leftLeagueOrder - rightLeagueOrder;
+                    }
+
+                    const leftConferenceIndex = conferenceOrder.indexOf(left.title);
+                    const rightConferenceIndex = conferenceOrder.indexOf(right.title);
+
+                    if (leftConferenceIndex === -1 && rightConferenceIndex === -1) {
+                        return left.title.localeCompare(right.title);
+                    }
+
+                    if (leftConferenceIndex === -1) {
+                        return 1;
+                    }
+
+                    if (rightConferenceIndex === -1) {
+                        return -1;
+                    }
+
+                    return leftConferenceIndex - rightConferenceIndex;
+                });
+        } else {
+            this.elements.standingsTableContainer.classList.remove('standings-grid-leagues');
+
+            const groupedByDivision = standingsRows.reduce((groups, row) => {
+                const divisionLabel = row.division || 'Division';
+                const key = `${row.conference}::${divisionLabel}`;
+
+                if (!groups.has(key)) {
+                    groups.set(key, {
+                        conference: row.conference,
+                        division: divisionLabel,
+                        rows: []
+                    });
+                }
+
+                groups.get(key).rows.push(row);
+                return groups;
+            }, new Map());
+
+            orderedGroups = Array.from(groupedByDivision.values())
+                .map((group) => ({
+                    title: `${group.conference} - ${group.division}`,
+                    conference: group.conference,
+                    division: group.division,
+                    rows: group.rows
+                }))
+                .sort((left, right) => {
+                    const leftConferenceIndex = conferenceOrder.indexOf(left.conference);
+                    const rightConferenceIndex = conferenceOrder.indexOf(right.conference);
+
+                    if (leftConferenceIndex !== rightConferenceIndex) {
+                        if (leftConferenceIndex === -1) {
+                            return 1;
+                        }
+
+                        if (rightConferenceIndex === -1) {
+                            return -1;
+                        }
+
+                        return leftConferenceIndex - rightConferenceIndex;
+                    }
+
+                    const leftDivisionIndex = divisionOrder.indexOf(left.division);
+                    const rightDivisionIndex = divisionOrder.indexOf(right.division);
+
+                    if (leftDivisionIndex !== rightDivisionIndex) {
+                        if (leftDivisionIndex === -1 && rightDivisionIndex === -1) {
+                            return left.division.localeCompare(right.division);
+                        }
+
+                        if (leftDivisionIndex === -1) {
+                            return 1;
+                        }
+
+                        if (rightDivisionIndex === -1) {
+                            return -1;
+                        }
+
+                        return leftDivisionIndex - rightDivisionIndex;
+                    }
+
+                    return left.division.localeCompare(right.division);
+                });
+        }
+
+        if (orderedGroups.length === 0) {
+            this.elements.standingsTableState.textContent = 'MLB standings are unavailable for the selected date.';
+            this.elements.standingsTableState.classList.remove('hidden');
+            this.elements.standingsTableContainer.classList.add('hidden');
+            return;
+        }
+
+        orderedGroups.forEach((group) => {
+            this.elements.standingsTableContainer.appendChild(this.createStandingsSection(group.title, group.rows));
+        });
+
+        this.elements.standingsTableState.classList.add('hidden');
+        this.elements.standingsTableContainer.classList.remove('hidden');
     }
 
     /**
@@ -1448,6 +2001,13 @@ class UI {
             ? forceOpen
             : this.elements.filtersContainer.classList.contains('hidden');
 
+        if (shouldOpen && this.elements.standingsModal) {
+            this.elements.standingsModal.classList.add('hidden');
+            if (this.elements.openStandingsBtn) {
+                this.elements.openStandingsBtn.setAttribute('aria-expanded', 'false');
+            }
+        }
+
         if (shouldOpen && this.elements.periodFilterModal) {
             this.elements.periodFilterModal.classList.add('hidden');
             if (this.elements.openPeriodFilterBtn) {
@@ -1483,6 +2043,13 @@ class UI {
             this.elements.filtersContainer.classList.add('hidden');
             if (this.elements.toggleFiltersBtn) {
                 this.elements.toggleFiltersBtn.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        if (shouldOpen && this.elements.standingsModal) {
+            this.elements.standingsModal.classList.add('hidden');
+            if (this.elements.openStandingsBtn) {
+                this.elements.openStandingsBtn.setAttribute('aria-expanded', 'false');
             }
         }
 
@@ -1527,6 +2094,40 @@ class UI {
         this.updateModalBodyState();
     }
 
+    toggleStandingsModal(forceOpen = null) {
+        if (!this.elements.standingsModal) {
+            return;
+        }
+
+        const shouldOpen = typeof forceOpen === 'boolean'
+            ? forceOpen
+            : this.elements.standingsModal.classList.contains('hidden');
+
+        if (shouldOpen && this.elements.filtersContainer) {
+            this.elements.filtersContainer.classList.add('hidden');
+            if (this.elements.toggleFiltersBtn) {
+                this.elements.toggleFiltersBtn.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        if (shouldOpen && this.elements.periodFilterModal) {
+            this.elements.periodFilterModal.classList.add('hidden');
+            if (this.elements.openPeriodFilterBtn) {
+                this.elements.openPeriodFilterBtn.setAttribute('aria-expanded', 'false');
+            }
+
+            this.toggleTeamPickerList(false);
+        }
+
+        this.elements.standingsModal.classList.toggle('hidden', !shouldOpen);
+
+        if (this.elements.openStandingsBtn) {
+            this.elements.openStandingsBtn.setAttribute('aria-expanded', String(shouldOpen));
+        }
+
+        this.updateModalBodyState();
+    }
+
     /**
      * Determine whether a modal is currently visible.
      * @param {HTMLElement|null} modalElement - Modal element
@@ -1541,7 +2142,8 @@ class UI {
      */
     updateModalBodyState() {
         const anyOpen = this.isModalOpen(this.elements.filtersContainer)
-            || this.isModalOpen(this.elements.periodFilterModal);
+            || this.isModalOpen(this.elements.periodFilterModal)
+            || this.isModalOpen(this.elements.standingsModal);
         document.body.classList.toggle('modal-open', anyOpen);
     }
 }

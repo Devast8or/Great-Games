@@ -2805,6 +2805,43 @@ body.modal-open {
     padding: 0.9rem;
 }
 
+.standings-league-switch {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+    padding: 0.28rem;
+    border-radius: 999px;
+    border: 1px solid rgba(137, 187, 230, 0.24);
+    background: rgba(8, 25, 40, 0.72);
+    width: fit-content;
+}
+
+.standings-league-btn {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-soft);
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    font-weight: 700;
+    padding: 0.34rem 0.8rem;
+    cursor: pointer;
+    transition: var(--transition);
+    min-height: 34px;
+}
+
+.standings-league-btn:hover {
+    color: var(--text-main);
+    background: rgba(53, 213, 255, 0.12);
+}
+
+.standings-league-btn.active {
+    color: #03263a;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    box-shadow: 0 8px 20px rgba(0, 184, 230, 0.28);
+}
+
 .standings-table-state {
     padding: 1rem;
     border-radius: 14px;
@@ -2818,6 +2855,10 @@ body.modal-open {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.8rem;
+}
+
+.standings-grid.standings-grid-leagues {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .standings-conference {
@@ -2869,18 +2910,40 @@ body.modal-open {
 
 .standings-team-cell {
     display: grid;
-    gap: 0.08rem;
+    grid-template-columns: minmax(0, 1fr) 2.3rem;
+    grid-template-rows: auto auto;
+    column-gap: 0.5rem;
+    row-gap: 0.14rem;
+    min-height: 2.3rem;
 }
 
 .standings-team-name {
     font-weight: 700;
+    line-height: 1.1;
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.standings-team-badge-slot {
+    display: inline-flex;
+    justify-content: flex-end;
+    align-items: center;
+    width: 2.3rem;
+    min-width: 2.3rem;
+    flex: 0 0 2.3rem;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
 }
 
 .standings-team-abbr {
     color: var(--text-soft);
     font-size: 0.69rem;
     letter-spacing: 0.04em;
+    line-height: 1;
     text-transform: uppercase;
+    grid-column: 1;
+    grid-row: 2;
 }
 
 .standings-row-highlight td {
@@ -2916,37 +2979,64 @@ body.modal-open {
 }
 
 .standings-team-highlight {
-    display: inline-flex;
-    align-items: center;
-    width: fit-content;
-    margin-top: 0.18rem;
-    padding: 0.14rem 0.44rem;
-    border-radius: 999px;
-    background: rgba(255, 120, 71, 0.16);
-    border: 1px solid rgba(255, 120, 71, 0.3);
-    color: #ffd8cc;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    isolation: isolate;
+}
+
+.standings-team-highlight::before {
+    content: '★';
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 2.2rem;
+    line-height: 1;
+    color: #ff9a6b;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+    z-index: 0;
+}
+
+.standings-team-highlight-number {
+    position: relative;
+    z-index: 1;
+    font-size: 0.84rem;
+    font-weight: 900;
+    line-height: 1;
+    color: #050505;
+    transform: translateY(0.16rem);
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.35);
 }
 
 .standings-team-highlight-game-1 {
-    background: rgba(255, 120, 71, 0.18);
-    border-color: rgba(255, 120, 71, 0.36);
-    color: #ffe1d6;
+    color: #3a2a00;
+}
+
+.standings-team-highlight-game-1::before {
+    color: #ffd700;
 }
 
 .standings-team-highlight-game-2 {
-    background: rgba(255, 194, 71, 0.18);
-    border-color: rgba(255, 194, 71, 0.34);
-    color: #fff0c8;
+    color: #1f242b;
+}
+
+.standings-team-highlight-game-2::before {
+    color: #c0c0c0;
 }
 
 .standings-team-highlight-game-3 {
-    background: rgba(83, 212, 163, 0.18);
-    border-color: rgba(83, 212, 163, 0.34);
-    color: #d8fff0;
+    color: #2f1708;
+}
+
+.standings-team-highlight-game-3::before {
+    color: #cd7f32;
+}
+
+.standings-team-highlight-empty {
+    visibility: hidden;
 }
 .period-filter-content {
     display: grid;
@@ -4487,7 +4577,8 @@ body.sport-nba {
 }
 
 body.sport-mlb .brand-logo,
-body.sport-nba .brand-logo {
+body.sport-nba .brand-logo,
+body.sport-nhl .brand-logo {
     height: clamp(66px, 8vw, 118px);
     width: auto;
     max-width: min(260px, 32vw);
@@ -4499,8 +4590,17 @@ body.sport-nba .games-container.panel-surface::before {
     background-size: clamp(150px, 24vw, 250px) auto;
 }
 
-body.sport-mlb #open-standings {
-    display: none;
+body.sport-nhl .games-container.panel-surface::before {
+    background-image: url('https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg');
+    opacity: 0.11;
+    background-size: clamp(150px, 22vw, 246px) auto;
+}
+
+body.sport-nhl .box-score-table th.team-header-cell {
+    background-image: url('https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: calc(var(--box-logo-cell-size) - 0.75rem) auto;
 }
 
 body.sport-nba .settings-inline-icon {

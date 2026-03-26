@@ -1,4 +1,4 @@
-const SUPPORTED_SPORTS = new Set(['mlb', 'nba']);
+const SUPPORTED_SPORTS = new Set(['mlb', 'nba', 'nhl']);
 const SPORT_STORAGE_KEY = 'great-games-sport';
 
 const SPORT_CONTENT = {
@@ -15,6 +15,13 @@ const SPORT_CONTENT = {
         brandAlt: 'NBA Great Games',
         footerPrimary: 'NBA Great Games • Spoiler-free basketball viewing',
         footerSecondary: 'Data provided by NBA data providers'
+    },
+    nhl: {
+        title: 'NHL Great Games - Watch Without Spoilers',
+        brandLogo: 'https://upload.wikimedia.org/wikipedia/en/3/3a/05_NHL_Shield.svg',
+        brandAlt: 'NHL Great Games',
+        footerPrimary: 'NHL Great Games • Spoiler-free hockey viewing',
+        footerSecondary: 'Data provided by ESPN NHL endpoints'
     }
 };
 
@@ -184,6 +191,60 @@ function applyNbaFilterPresentation() {
     setToggleCopy('extra-innings', 'Overtime Drama', 'Regulation plus extra periods');
 }
 
+function applyNhlFilterPresentation() {
+    const openPeriodFilterButton = document.getElementById('open-period-filter');
+    if (openPeriodFilterButton) {
+        openPeriodFilterButton.classList.remove('hidden');
+        openPeriodFilterButton.setAttribute('aria-expanded', 'false');
+    }
+
+    const activePeriodFilterBadge = document.getElementById('active-period-filter');
+    if (activePeriodFilterBadge) {
+        activePeriodFilterBadge.classList.add('hidden');
+    }
+
+    const periodFilterModal = document.getElementById('period-filter-modal');
+    if (periodFilterModal) {
+        periodFilterModal.classList.add('hidden');
+    }
+
+    const enabledToggleIds = new Set([
+        'close-games',
+        'lead-changes',
+        'extra-innings',
+        'team-rankings'
+    ]);
+
+    const allToggleWrappers = Array.from(document.querySelectorAll('.filters-modal .filter-toggle-wrapper'));
+    allToggleWrappers.forEach((wrapper) => {
+        const input = wrapper.querySelector('input.toggle-input');
+        const shouldShow = input && enabledToggleIds.has(input.id);
+        wrapper.classList.toggle('hidden', !shouldShow);
+    });
+
+    const categories = Array.from(document.querySelectorAll('.filters-modal .filter-category'));
+    categories.forEach((category) => {
+        const visibleToggleCount = category.querySelectorAll('.filter-toggle-wrapper:not(.hidden)').length;
+        category.classList.toggle('hidden', visibleToggleCount === 0);
+    });
+
+    const categoryTitles = Array.from(document.querySelectorAll('.filters-modal .filter-category h4'));
+    if (categoryTitles[0]) {
+        categoryTitles[0].textContent = 'Core Excitement Signals';
+    }
+    if (categoryTitles[1]) {
+        categoryTitles[1].textContent = 'Hockey Game Dynamics';
+    }
+    if (categoryTitles[2]) {
+        categoryTitles[2].textContent = 'Advanced Impact Signals';
+    }
+
+    setToggleCopy('close-games', 'One-Goal Tension', 'Tighter scorelines rank higher');
+    setToggleCopy('lead-changes', 'Momentum Swings', 'Lead changes and tie pressure');
+    setToggleCopy('extra-innings', 'OT/SO Drama', 'Overtime and shootout boost');
+    setToggleCopy('team-rankings', 'Goalie Workload', 'High-save, high-danger pace proxy');
+}
+
 function applyShellContent(activeSport) {
     const content = SPORT_CONTENT[activeSport] || SPORT_CONTENT.mlb;
 
@@ -206,11 +267,44 @@ function applyShellContent(activeSport) {
         footerSecondary.textContent = content.footerSecondary;
     }
 
-    document.body.classList.remove('sport-mlb', 'sport-nba');
+    document.body.classList.remove('sport-mlb', 'sport-nba', 'sport-nhl');
     document.body.classList.add(`sport-${activeSport}`);
+
+    const standingsTitle = document.getElementById('standings-modal-title');
+    const closeStandingsBtn = document.getElementById('close-standings-modal');
+    const openStandingsBtn = document.getElementById('open-standings');
+    if (standingsTitle) {
+        standingsTitle.textContent = activeSport === 'nhl'
+            ? 'NHL Standings'
+            : activeSport === 'nba'
+                ? 'NBA Standings'
+                : 'MLB Standings';
+    }
+    if (closeStandingsBtn) {
+        closeStandingsBtn.setAttribute(
+            'aria-label',
+            activeSport === 'nhl'
+                ? 'Close NHL standings'
+                : activeSport === 'nba'
+                    ? 'Close NBA standings'
+                    : 'Close MLB standings'
+        );
+    }
+    if (openStandingsBtn) {
+        openStandingsBtn.setAttribute(
+            'aria-label',
+            activeSport === 'nhl'
+                ? 'Open NHL standings'
+                : activeSport === 'nba'
+                    ? 'Open NBA standings'
+                    : 'Open MLB standings'
+        );
+    }
 
     if (activeSport === 'nba') {
         applyNbaFilterPresentation();
+    } else if (activeSport === 'nhl') {
+        applyNhlFilterPresentation();
     } else {
         applyMlbFilterPresentation();
     }
@@ -221,6 +315,14 @@ async function bootstrapSportApp(activeSport) {
         const module = await import('./nba/app.js');
         if (typeof module.initNbaApp === 'function') {
             module.initNbaApp();
+        }
+        return;
+    }
+
+    if (activeSport === 'nhl') {
+        const module = await import('./nhl/app.js');
+        if (typeof module.initNhlApp === 'function') {
+            module.initNhlApp();
         }
         return;
     }
