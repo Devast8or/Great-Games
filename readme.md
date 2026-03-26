@@ -167,28 +167,14 @@ Great Games/
 
 ## NBA API Notes
 
-- NBA mode now uses BALLDONTLIE (`https://api.balldontlie.io`).
-- Supported scoreboard data path:
-  - Games (`GET /nba/v1/games`) mapped into `GameHeader`, `LineScore`, and `GameInfo` result sets.
-- Optional enhancement paths (plan-dependent):
-  - Player stats (`GET /nba/v1/stats`)
-  - Advanced stats (`GET /nba/v1/stats/advanced`)
-  - If these endpoints return `401/403`, enhancement fetches are disabled for the session and base scoreboard ranking still works.
-- Authentication header used for all NBA requests: `Authorization: <api_key>`.
-- API base URL is configurable:
-  - Query string: `?nbaBdlBaseUrl=https://api.balldontlie.io`
-  - Global: `window.__GREAT_GAMES_NBA_BDL_BASE_URL__`
-  - Local storage: `localStorage.setItem('great-games-nba-bdl-base-url', 'https://api.balldontlie.io')`
-  - Backward-compatible query alias is still accepted: `?nbaApiSportsBaseUrl=...`
-- API key is configurable:
-  - Query string: `?nbaBdlApiKey=YOUR_KEY` (legacy `?nbaApiKey=...` also supported)
-  - Global: `window.__GREAT_GAMES_NBA_BDL_API_KEY__`
-  - Local storage: `localStorage.setItem('great-games-nba-bdl-api-key', 'YOUR_KEY')`
-- Enhancement toggle is configurable:
-  - Query string: `?nbaBdlEnhancements=true`
-  - Global: `window.__GREAT_GAMES_NBA_BDL_ENHANCEMENTS_ENABLED__ = true`
-  - Local storage: `localStorage.setItem('great-games-nba-bdl-enhancements-enabled', 'true')`
-- Frontend key exposure note: if used directly in browser code, the key is visible to users. Use provider-side key restrictions and rotate keys regularly.
+- NBA mode now uses ESPN public endpoints (`https://site.api.espn.com`).
+- Supported scoreboard path:
+  - `GET /apis/site/v2/sports/basketball/nba/scoreboard?dates=YYYYMMDD&limit=200`
+  - Mapped into `GameHeader`, `LineScore`, and `GameInfo` result sets.
+- Supported standings path:
+  - `GET /apis/v2/sports/basketball/nba/standings?season=YYYY`
+  - Mapped into `standingsByTeamId` for division/conference context.
+- NBA enhancements are intentionally scoreboard-only in ESPN mode (`playerRows` and `advancedTeamRows` are empty).
 
 ## Visual Asset Credits
 

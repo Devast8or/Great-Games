@@ -1,4 +1,5 @@
 import { API } from '../api.js';
+import Utils from '../utils.js';
 import LineupDisplay from './LineupDisplay.js';
 import PitcherDisplay from './PitcherDisplay.js';
 
@@ -154,7 +155,7 @@ class GameTableRow {
         name.textContent = team.name;
         textWrap.appendChild(name);
 
-        if (team.record) {
+        if (Utils.shouldShowTeamRecord(team.record)) {
             const record = document.createElement('div');
             record.className = 'table-team-record';
             record.textContent = `${team.record.wins}-${team.record.losses}`;

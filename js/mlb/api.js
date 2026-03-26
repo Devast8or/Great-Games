@@ -18,6 +18,15 @@ export const API = {
     SCHEDULE_TIMEZONE: 'America/New_York',
     cache: new APICache(),
 
+    inferSeasonFromDate(dateValue) {
+        const parsed = new Date(dateValue);
+        if (Number.isNaN(parsed.getTime())) {
+            return null;
+        }
+
+        return parsed.getUTCFullYear();
+    },
+
     /**
      * Make an API request with error handling and caching
      * @param {string} endpoint - API endpoint
@@ -84,7 +93,7 @@ export const API = {
             leagueId: '103,104',
             season: date.substring(0, 4),
             date,
-            hydrate: 'team,division'
+            hydrate: 'team,division,league'
         });
     },
 
@@ -107,6 +116,47 @@ export const API = {
         }
         
         return teamRankings;
+    },
+
+    mapStandingsByTeam(standingsData) {
+        const standingsByTeamId = {};
+
+        if (!Array.isArray(standingsData?.records)) {
+            return standingsByTeamId;
+        }
+
+        standingsData.records.forEach((record) => {
+            const divisionName = Utils.formatDivisionName(record?.division?.name || '');
+            const rawLeagueName = String(record?.league?.name || '').trim();
+            const inferredLeagueName = divisionName.startsWith('AL')
+                ? 'American League'
+                : divisionName.startsWith('NL')
+                    ? 'National League'
+                    : 'League';
+            const leagueName = rawLeagueName || inferredLeagueName;
+
+            (record?.teamRecords || []).forEach((teamRecord) => {
+                const teamId = Number.parseInt(teamRecord?.team?.id, 10);
+                if (!Number.isFinite(teamId) || teamId <= 0) {
+                    return;
+                }
+
+                standingsByTeamId[String(teamId)] = {
+                    teamId,
+                    teamName: String(teamRecord?.team?.name || '').trim(),
+                    abbreviation: String(teamRecord?.team?.abbreviation || '').trim(),
+                    conference: leagueName,
+                    division: divisionName,
+                    divisionRank: Number.parseInt(teamRecord?.divisionRank, 10) || null,
+                    wins: Number.parseInt(teamRecord?.wins, 10) || 0,
+                    losses: Number.parseInt(teamRecord?.losses, 10) || 0,
+                    winPct: teamRecord?.winningPercentage || null,
+                    gamesBehind: teamRecord?.gamesBack || '-'
+                };
+            });
+        });
+
+        return standingsByTeamId;
     },
 
     async fetchGameStats(gameId) {

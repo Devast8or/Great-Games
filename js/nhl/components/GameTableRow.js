@@ -1,4 +1,4 @@
-import Utils from '../utils.js';
+﻿import Utils from '../utils.js';
 
 class GameTableRow {
     static openInstance = null;
@@ -8,7 +8,7 @@ class GameTableRow {
         this.options = options;
 
         const safeId = String(this.game.id).replace(/[^a-zA-Z0-9_-]/g, '');
-        this.detailsId = `nba-game-details-${safeId}`;
+        this.detailsId = `nhl-game-details-${safeId}`;
 
         this.mainRow = null;
         this.detailsRow = null;
@@ -84,7 +84,7 @@ class GameTableRow {
 
         this.expandIcon = document.createElement('span');
         this.expandIcon.className = 'row-expand-icon';
-        this.expandIcon.textContent = '▼';
+        this.expandIcon.textContent = 'v';
         expandCell.appendChild(this.expandIcon);
 
         row.appendChild(rankCell);
@@ -163,7 +163,7 @@ class GameTableRow {
         detailsCell.colSpan = this.options.showPlayedDate ? 7 : 6;
 
         this.detailsContainer = document.createElement('div');
-        this.detailsContainer.className = 'game-details-content nba-game-details-content';
+        this.detailsContainer.className = 'game-details-content nhl-game-details-content';
 
         const actions = document.createElement('div');
         actions.className = 'game-details-actions';
@@ -210,7 +210,7 @@ class GameTableRow {
 
             this.revealPeriodBtn = document.createElement('button');
             this.revealPeriodBtn.className = 'reveal-btn table-reveal-btn table-half-inning-btn';
-            this.revealPeriodBtn.textContent = 'Reveal Quarter';
+            this.revealPeriodBtn.textContent = 'Reveal Period';
             this.revealPeriodBtn.setAttribute('aria-pressed', 'false');
             this.revealPeriodBtn.addEventListener('click', (event) => {
                 event.stopPropagation();
@@ -264,7 +264,7 @@ class GameTableRow {
         this.mainRow.setAttribute('aria-expanded', 'true');
 
         if (this.expandIcon) {
-            this.expandIcon.textContent = '▲';
+            this.expandIcon.textContent = '^';
         }
     }
 
@@ -274,7 +274,7 @@ class GameTableRow {
         this.mainRow.setAttribute('aria-expanded', 'false');
 
         if (this.expandIcon) {
-            this.expandIcon.textContent = '▼';
+            this.expandIcon.textContent = 'v';
         }
     }
 
@@ -517,15 +517,15 @@ class GameTableRow {
         }
 
         if (this.revealedPeriods >= this.totalPeriods && this.totalPeriods > 0) {
-            this.revealPeriodBtn.textContent = 'Reveal Quarter';
-            this.revealPeriodBtn.setAttribute('aria-label', 'Reveal first quarter and update score');
+            this.revealPeriodBtn.textContent = 'Reveal Period';
+            this.revealPeriodBtn.setAttribute('aria-label', 'Reveal first period and update score');
             this.revealPeriodBtn.setAttribute('aria-pressed', 'false');
             return;
         }
 
         const nextLabel = this.getPeriodLabel(this.revealedPeriods + 1);
         this.revealPeriodBtn.textContent = this.revealedPeriods === 0
-            ? 'Reveal Quarter'
+            ? 'Reveal Period'
             : `Reveal ${nextLabel}`;
         this.revealPeriodBtn.setAttribute('aria-label', `Reveal ${nextLabel} and update score`);
         this.revealPeriodBtn.setAttribute('aria-pressed', 'false');
@@ -534,12 +534,12 @@ class GameTableRow {
     getPeriodLabel(step) {
         const clampedStep = Math.max(1, Math.min(step, this.totalPeriods || 1));
         const period = this.game.periodScores[clampedStep - 1];
-        return period?.label || `Q${clampedStep}`;
+        return period?.label || `P${clampedStep}`;
     }
 
     getStatusText() {
         const statusText = String(this.game.status || '').toLowerCase();
-        const inProgressKeywords = ['q1', 'q2', 'q3', 'q4', 'ot', 'halftime', 'in progress'];
+        const inProgressKeywords = ['p1', 'p2', 'p3', 'ot', 'shootout', 'intermission', 'in progress'];
 
         if (inProgressKeywords.some((keyword) => statusText.includes(keyword))) {
             return 'In Progress';
@@ -655,9 +655,9 @@ class GameTableRow {
 
         const encodedAwayToken = encodeURIComponent(awayTeamToken).replace(/%20/g, '+');
         const encodedHomeToken = encodeURIComponent(homeTeamToken).replace(/%20/g, '+');
-        const searchQuery = `NBA+RS+${seasonYear}+${encodedAwayToken}+${encodedHomeToken}`;
+        const searchQuery = `${seasonYear}+${encodedAwayToken}+${encodedHomeToken}`;
 
-        return `https://sportscult.org/index.php?page=torrents&search=${searchQuery}&category=11&active=1&gold=0`;
+        return `https://sportscult.org/index.php?page=torrents&search=${searchQuery}&category=27&active=1&gold=0`;
     }
 
     getStarRating() {
@@ -669,8 +669,9 @@ class GameTableRow {
 
         const stars = Math.max(1, Math.min(5, Math.floor(score / 20) + 1));
         const hasHalfStar = stars < 5 && score % 20 >= 10;
-        return '★'.repeat(stars) + (hasHalfStar ? '½' : '');
+        return '\u2605'.repeat(stars) + (hasHalfStar ? '\u00bd' : '');
     }
 }
 
 export default GameTableRow;
+

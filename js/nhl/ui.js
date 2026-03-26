@@ -1,5 +1,5 @@
-/**
- * UI module for NBA mode.
+﻿/**
+ * UI module for NHL mode.
  */
 import GameTableRow from './components/GameTableRow.js';
 import { API } from './api.js';
@@ -42,15 +42,18 @@ class UI {
             filters: {
                 closeGames: document.getElementById('close-games'),
                 leadChanges: document.getElementById('lead-changes'),
-                extraInnings: document.getElementById('extra-innings')
+                extraInnings: document.getElementById('extra-innings'),
+                highScoring: document.getElementById('high-scoring'),
+                teamRankings: document.getElementById('team-rankings'),
+                rivalryGame: document.getElementById('rivalry-game')
             }
         };
 
         this.games = [];
         this.isFutureGames = false;
         this.gameCards = new Map();
-        this.rankingOptionsStorageKey = 'nba-ranking-options';
-        this.defaultNoGamesMessage = 'No NBA games found for this date.';
+        this.rankingOptionsStorageKey = 'nhl-ranking-options';
+        this.defaultNoGamesMessage = 'No NHL games found for this date.';
         this.defaultLookbackDays = 7;
         this.maxLookbackDays = 120;
         this.defaultMinimumStars = 1;
@@ -271,17 +274,17 @@ class UI {
         }
 
         const queryParams = new URLSearchParams(window.location.search);
-        const fromQuery = queryParams.get('nbaDebug');
+        const fromQuery = queryParams.get('NHLDebug');
         if (fromQuery !== null) {
             return this.parseBoolean(fromQuery, false);
         }
 
-        if (typeof window.__GREAT_GAMES_NBA_DEBUG__ !== 'undefined') {
-            return this.parseBoolean(window.__GREAT_GAMES_NBA_DEBUG__, false);
+        if (typeof window.__GREAT_GAMES_NHL_DEBUG__ !== 'undefined') {
+            return this.parseBoolean(window.__GREAT_GAMES_NHL_DEBUG__, false);
         }
 
         try {
-            const fromStorage = window.localStorage?.getItem('great-games-nba-debug');
+            const fromStorage = window.localStorage?.getItem('great-games-NHL-debug');
             if (fromStorage !== null) {
                 return this.parseBoolean(fromStorage, false);
             }
@@ -656,12 +659,12 @@ class UI {
 
         const stars = Math.max(1, Math.min(5, Math.floor(score / 20) + 1));
         const hasHalfStar = stars < 5 && score % 20 >= 10;
-        return '★'.repeat(stars) + (hasHalfStar ? '½' : '');
+        return '\u2605'.repeat(stars) + (hasHalfStar ? '\u00bd' : '');
     }
 
     getMinimumStarsLabel(value) {
         const safeMinimumStars = this.normalizeMinimumStars(value);
-        const stars = '★'.repeat(safeMinimumStars);
+        const stars = '\u2605'.repeat(safeMinimumStars);
         return safeMinimumStars >= this.maximumStars
             ? stars
             : `${stars}+`;
@@ -776,9 +779,9 @@ class UI {
                 return false;
             }
 
-            console.error('Error loading filtered NBA games:', error);
+            console.error('Error loading filtered NHL games:', error);
             this.markStandingsUnavailable(anchorDate, API.inferSeasonFromDate(anchorDate));
-            this.showError(error.message || 'Failed to apply NBA game filter');
+            this.showError(error.message || 'Failed to apply NHL game filter');
             this.hideLoading();
             return false;
         }
@@ -1137,14 +1140,14 @@ class UI {
 
         const standingsRows = this.buildStandingsRows();
         if (this.standingsLoading) {
-            this.elements.standingsTableState.textContent = 'Loading NBA standings...';
+            this.elements.standingsTableState.textContent = 'Loading NHL standings...';
             this.elements.standingsTableState.classList.remove('hidden');
             this.elements.standingsTableContainer.classList.add('hidden');
             return;
         }
 
         if (standingsRows.length === 0) {
-            this.elements.standingsTableState.textContent = 'NBA standings are unavailable for the selected date.';
+            this.elements.standingsTableState.textContent = 'NHL standings are unavailable for the selected date.';
             this.elements.standingsTableState.classList.remove('hidden');
             this.elements.standingsTableContainer.classList.add('hidden');
             return;
@@ -1243,7 +1246,7 @@ class UI {
             const isTimeoutError = /timed out|gateway timeout/i.test(errorMessage)
                 || errorStatus === 408
                 || errorStatus === 504;
-            const isServerOffline = /unable to reach nba api|failed to fetch|network error|connection/i.test(errorMessage)
+            const isServerOffline = /unable to reach NHL api|failed to fetch|network error|connection/i.test(errorMessage)
                 || errorStatus === 0;
             const isAuthError = (
                 /api key|authorization|unauthorized|forbidden|invalid/i.test(errorMessage)
@@ -1255,42 +1258,42 @@ class UI {
             const isBadRequest = errorStatus === 400 || errorStatus === 422;
 
             if (isTimeoutError) {
-                console.error('Error loading NBA games:', error);
-                this.showError('ESPN NBA request timed out. Retry in a moment.');
+                console.error('Error loading NHL games:', error);
+                this.showError('ESPN NHL request timed out. Retry in a moment.');
                 return;
             }
 
             if (isServerOffline) {
-                console.error('Error loading NBA games:', error);
-                this.showError('ESPN NBA service is not reachable from this browser right now. Check network/CORS and retry.');
+                console.error('Error loading NHL games:', error);
+                this.showError('ESPN NHL service is not reachable from this browser right now. Check network/CORS and retry.');
                 return;
             }
 
             if (isAuthError) {
-                console.error('Error loading NBA games:', error);
-                this.showError('ESPN NBA request was denied. Verify endpoint access and retry.');
+                console.error('Error loading NHL games:', error);
+                this.showError('ESPN NHL request was denied. Verify endpoint access and retry.');
                 return;
             }
 
             if (isRateLimitError) {
-                console.error('Error loading NBA games:', error);
-                this.showError('ESPN NBA rate limit reached. Wait for reset or reduce request frequency.');
+                console.error('Error loading NHL games:', error);
+                this.showError('ESPN NHL rate limit reached. Wait for reset or reduce request frequency.');
                 return;
             }
 
             if (isBadRequest) {
-                console.error('Error loading NBA games:', error);
-                this.showError('ESPN rejected the NBA query parameters. Check date format and try again.');
+                console.error('Error loading NHL games:', error);
+                this.showError('ESPN rejected the NHL query parameters. Check date format and try again.');
                 return;
             }
 
-            console.error('Error loading NBA games:', error);
-            this.showError(error.message || 'Unable to load NBA games from ESPN.');
+            console.error('Error loading NHL games:', error);
+            this.showError(error.message || 'Unable to load NHL games from ESPN.');
         }
     }
 
     /**
-     * Enrich completed games with deeper NBA stats in the background.
+     * Enrich completed games with deeper NHL stats in the background.
      * @param {number} requestId - Active load request id
      */
     async enrichCompletedGames(requestId) {
@@ -1317,7 +1320,7 @@ class UI {
                 debugPhase: 'enhancement-pass'
             });
         } catch (error) {
-            console.warn('NBA enhancement pass failed:', error);
+            console.warn('NHL enhancement pass failed:', error);
         }
     }
 
@@ -1468,7 +1471,7 @@ class UI {
             ? context.rankByGameId
             : null;
 
-        console.group(`[NBA Ranking Debug] ${debugPhase} | ${selectedDate}`);
+        console.group(`[NHL Ranking Debug] ${debugPhase} | ${selectedDate}`);
         console.log('Ranking options:', rankingOptions);
         console.log('Ranking weights:', Ranker.weights);
         console.log('Context:', {
@@ -1589,7 +1592,7 @@ class UI {
                 }
             });
         } catch (error) {
-            console.warn('Unable to load NBA ranking options from storage:', error);
+            console.warn('Unable to load NHL ranking options from storage:', error);
         }
     }
 
@@ -1597,7 +1600,7 @@ class UI {
         try {
             localStorage.setItem(this.rankingOptionsStorageKey, JSON.stringify(this.getRankingOptions()));
         } catch (error) {
-            console.warn('Unable to save NBA ranking options to storage:', error);
+            console.warn('Unable to save NHL ranking options to storage:', error);
         }
     }
 
@@ -1646,7 +1649,7 @@ class UI {
 
         if (this.elements.noGames) {
             this.elements.noGames.textContent = this.activePeriodFilter
-                ? 'No completed NBA games found for the selected filter.'
+                ? 'No completed NHL games found for the selected filter.'
                 : this.defaultNoGamesMessage;
             this.elements.noGames.classList.remove('hidden');
         }
@@ -1797,3 +1800,4 @@ class UI {
 }
 
 export default new UI();
+

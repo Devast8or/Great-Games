@@ -46,7 +46,7 @@ class GameCard {
         this.element.querySelector('.away .team-logo').alt = this.game.awayTeam.name + ' logo';
         
         // Add team record for away team
-        if (this.game.awayTeam.record) {
+        if (Utils.shouldShowTeamRecord(this.game.awayTeam.record)) {
             const awayRecord = document.createElement('span');
             awayRecord.className = 'team-record';
             awayRecord.textContent = `(${this.game.awayTeam.record.wins}-${this.game.awayTeam.record.losses})`;
@@ -61,7 +61,7 @@ class GameCard {
         this.element.querySelector('.home .team-logo').alt = this.game.homeTeam.name + ' logo';
         
         // Add team record for home team
-        if (this.game.homeTeam.record) {
+        if (Utils.shouldShowTeamRecord(this.game.homeTeam.record)) {
             const homeRecord = document.createElement('span');
             homeRecord.className = 'team-record';
             homeRecord.textContent = `(${this.game.homeTeam.record.wins}-${this.game.homeTeam.record.losses})`;

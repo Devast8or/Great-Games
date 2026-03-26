@@ -95,6 +95,22 @@ const Utils = {
         };
         const suffix = (inning >= 11 && inning <= 13) ? 'th' : suffixes[inning % 10] || 'th';
         return `${inning}${suffix}`;
+    },
+
+    /**
+     * Determine whether a team record should be displayed.
+     * @param {{wins: number|string, losses: number|string}|null} record - Team record
+     * @param {number} minGamesPlayed - Minimum total games threshold
+     * @returns {boolean} - True when record has more than minGamesPlayed games
+     */
+    shouldShowTeamRecord(record, minGamesPlayed = 10) {
+        if (!record) return false;
+
+        const wins = Number.parseInt(record.wins, 10);
+        const losses = Number.parseInt(record.losses, 10);
+        const totalGames = (Number.isFinite(wins) ? wins : 0) + (Number.isFinite(losses) ? losses : 0);
+
+        return totalGames > minGamesPlayed;
     }
 };
 
