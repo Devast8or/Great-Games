@@ -585,8 +585,7 @@ class GameTableRow {
 
     getDetailsMetaLabel() {
         const awayTeamName = String(this.game?.awayTeam?.name || 'Away Team').trim();
-        const homeCity = this.getTeamCityLabel(this.game?.homeTeam);
-        const homeLabel = homeCity || String(this.game?.homeTeam?.name || 'Home Team').trim();
+        const homeLabel = String(this.game?.homeTeam?.name || 'Home Team').trim();
 
         return `${awayTeamName} @ ${homeLabel}`;
     }

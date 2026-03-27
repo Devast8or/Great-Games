@@ -1411,7 +1411,7 @@ class UI {
                     ${usePlayedDateColumn ? '<th class="th-played-date">Date</th>' : ''}
                     <th class="th-game-type">Type</th>
                     <th>Rating</th>
-                    <th>${shouldUseTipoffHeader ? 'Tipoff @' : 'Status'}</th>
+                    <th>${shouldUseTipoffHeader ? 'Faceoff @' : 'Status'}</th>
                     <th class="th-expand">Details</th>
                 </tr>
             </thead>

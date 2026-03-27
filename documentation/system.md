@@ -1,63 +1,72 @@
-# MLB Great Games — System Documentation (Current)
+# Great Games -- System Documentation (Current)
 
-This document describes the current implementation on branch `additionalStats`, including the table-first UI, ranking settings modal, and themed details panels.
+This document describes the current implementation on branch `additionalStats`, including the multi-sport shell and league-specific MLB, NBA, and NHL pipelines.
 
 ## 1. Project Overview
 
-MLB Great Games is a spoiler-aware frontend app for MLB game discovery. It:
+Great Games is a spoiler-aware frontend app for game discovery across three leagues:
 
-- fetches games and standings from the MLB Stats API,
-- ranks games by configurable excitement criteria,
-- renders games in a compact table,
-- supports drill-down details (lineups, pitchers, score reveal) without leaving the page.
+- MLB
+- NBA
+- NHL
 
-## 2. Current Interaction Model
+The app uses one shared shell and one runtime module per sport. Each sport module follows the same architecture (`app` -> `ui` -> `api` -> `parser` -> `ranker`) and renders into the same table/details surface.
 
-### Primary Page Flow
+## 2. Multi-Sport Shell
 
-1. App loads and auto-selects yesterday's date.
-2. Games auto-load immediately.
-3. User can change date (auto-reload happens on date change).
-4. User can open `Ranking ⚙` modal to toggle ranking criteria.
-5. User expands table rows for details and optionally reveals score.
+### Shell Entry: `js/app.js`
 
-### Table Behavior
+Responsibilities:
 
-- Columns: `#`, `Matchup`, `Venue`, `Type`, `Rating`, `Status`, `Details`.
-- Row click/keyboard toggles details expansion.
-- Only one details row is expanded at a time.
-- Status values are normalized to:
-  - `Final`
-  - `In Progress`
-  - scheduled first-pitch time (scheduled/preview rows)
-- Day boundaries for table date selection follow MLB schedule timezone semantics (`America/New_York`) rather than browser-local midnight.
-- Upcoming-day views include `Preview`, `Scheduled`, and `Live` games.
-- Status-column heading is conditional:
-  - `First pitch @` when all displayed rows are scheduled/preview
-  - `Status` when any row is live or final
-- `Type` is derived from schedule `gameType` with user-friendly labels, and uses `seriesDescription`/`description` metadata to disambiguate special-event `F` games (for example, World Baseball Classic).
-- CET subline rendering in status was tested and then removed; table status is currently single-line.
-- In expanded details, pitcher cards attempt to show pitcher-linked highlight/action images; fallback uses a local unknown-player headshot asset when pitcher data/image is unavailable.
+- Resolves active sport from URL query `?sport=` or `localStorage` key `great-games-sport`.
+- Defaults to `mlb` when no valid sport is provided.
+- Updates brand logo/title/footer copy by sport.
+- Applies sport-specific filter-modal presentation text and visible toggles.
+- Dynamically imports the correct app entry:
+  - `js/mlb/app.js`
+  - `js/nba/app.js`
+  - `js/nhl/app.js`
 
-### Ranking Settings Modal
+### Shared Interaction Model
 
-- Opened by right-aligned `Ranking ⚙` button beside date selector.
-- Centered overlay modal.
-- Modal node is reparented to `document.body` during init to keep viewport-fixed positioning stable when table rows expand.
-- Ranking criteria toggle state is persisted in browser `localStorage` and restored during UI initialization.
-- Closes via:
-  - close (`×`) button,
-  - backdrop click,
-  - `Escape` key.
+1. App loads and auto-selects yesterday.
+2. Selected sport module auto-loads games for that date.
+3. Date changes re-run load flow.
+4. User can open Filter, Standings, and Ranking modals.
+5. User can expand rows to reveal spoiler-protected score/details.
 
-## 3. Source Structure
+## 3. Common UI Surface
+
+Shared `index.html` regions:
+
+- sport switcher header (`MLB`, `NBA`, `NHL`)
+- toolbar with `Game Date`, `Filter`, `Standings`, `Ranking`
+- active period-filter badge
+- period-filter modal
+- standings modal
+- ranking criteria modal
+- loading/error/empty states
+- table mount node (`#games-list`)
+
+Shared behavior details:
+
+- One expanded details row at a time.
+- Ranking toggles persist per sport in local storage.
+- Modal hosts are reparented to `document.body` for stable viewport positioning.
+- `Escape` closes team picker first, then open modal.
+
+## 4. Source Structure
 
 ```text
 Great Games/
 ├── index.html
 ├── readme.md
 ├── documentation/
-│   └── system.md
+│   ├── system.md
+│   ├── changes-2026-03-04.md
+│   ├── changes-2026-03-05.md
+│   ├── changes-2026-03-27.md
+│   └── changes-template.md
 ├── css/
 │   ├── styles.css
 │   └── responsive.css
@@ -67,266 +76,105 @@ Great Games/
 │       ├── mlb_rivals.json
 │       └── unknown-player-headshot.png
 └── js/
-    └── mlb/
-        ├── app.js
-        ├── ui.js
-        ├── api.js
-        ├── parser.js
-        ├── ranker.js
-        ├── cache.js
-        ├── utils.js
-        ├── test-api.js
-        └── components/
-            ├── GameTableRow.js
-            ├── GameCard.js (legacy)
-            ├── LineupDisplay.js
-            ├── PitcherDisplay.js
-            ├── PlayerDetailPanel.js
-            └── PitcherDetailPanel.js
+    ├── app.js
+    ├── mlb/
+    ├── nba/
+    └── nhl/
 ```
 
-## 4. Core Modules
+## 5. League Modules
 
-### App Module — `js/mlb/app.js`
+### MLB Modules (`js/mlb/*`)
 
-Responsibilities:
+Provider and model:
 
-- Initializes UI on `DOMContentLoaded`.
-- Wires global `unhandledrejection` handler for `APIError` display.
+- Uses MLB Stats API schedules, standings, lineups, pitcher/player data.
+- Includes MLB + International Baseball schedule coverage (`sportId: 1,51`).
+- Uses `timeZone=America/New_York` for schedule-day alignment.
 
-### UI Module — `js/mlb/ui.js`
+Key behavior:
 
-Responsibilities:
+- Preserves spoiler-safe matchup records by deriving pre-game completed-game W-L.
+- Supports baseball details flow: lineups, pitcher cards, player panel, pitcher panel.
+- Supports progressive score reveal with inning and cumulative `R/H/E` behavior.
 
-- Controls date selection, loading states, errors, and no-games view.
-- Auto-loads games on startup and on date change.
-- Opens/closes ranking modal.
-- Persists ranking criteria selections (`mlb-ranking-options`) and reapplies saved values on load.
-- Renders ranked/scheduled games in table form via `GameTableRow`.
+### NBA Modules (`js/nba/*`)
 
-Key methods:
+Provider and model:
 
-- `init()`
-- `handleLoadGames()`
-- `loadCompletedGames(date)`
-- `loadFutureGames(date)`
-- `displayGames()`
-- `refreshGameRankings()`
-- `loadRankingOptionsFromStorage()`
-- `saveRankingOptionsToStorage()`
-- `toggleFiltersPanel(forceOpen)`
+- Uses ESPN public endpoints for scoreboard and standings.
+- Scoreboard endpoint:
+  - `/apis/site/v2/sports/basketball/nba/scoreboard?dates=YYYYMMDD&limit=200`
+- Standings endpoint:
+  - `/apis/v2/sports/basketball/nba/standings?season=YYYY`
+- API layer maps ESPN payloads into `GameHeader`, `LineScore`, `GameInfo` result sets consumed by parser.
 
-### API Module — `js/mlb/api.js`
+Key behavior:
 
-Responsibilities:
+- Ranking criteria intentionally limited to:
+  - `closeGames` (Finish tension)
+  - `leadChanges` (Momentum swings)
+  - `extraInnings` (Overtime drama)
+- Parser computes scoreboard-derived fallback signals for advanced context fields while ESPN enhancement rows stay empty.
+- Team division standing labels are generated from standings when available.
 
-- MLB API communication.
-- Fetching schedules, standings, lineups, pitchers, and game details.
-- Schedule requests include MLB + International Baseball (`sportId: '1,51'`) and are timezone-scoped with `timeZone=America/New_York` so date buckets align with MLB.com schedule-day behavior.
-- Team logo URL generation.
-- Error wrapping via `APIError`.
+### NHL Modules (`js/nhl/*`)
 
-### Parser Module — `js/mlb/parser.js`
+Provider and model:
 
-Responsibilities:
+- Uses ESPN public endpoints for scoreboard and standings.
+- API mapping contract mirrors NBA path (`GameHeader`, `LineScore`, `GameInfo`).
+- Extends line-score mapping with hockey-specific stats (`SHOTS`, `SAVES`, `PP_GOALS`).
 
-- Converts raw API payloads into normalized game objects.
-- Builds completed-game and future-game models.
-- Uses timezone-scoped schedule bucket day (`dates[].date`) for completed-game day filtering.
-- Includes live games in upcoming-day parsing (`Preview`, `Scheduled`, `Live`).
-- Preserves `gameType` for completed and future games to support correct stats split queries.
-- Preserves schedule series metadata (`seriesDescription`, `seriesGameNumber`, `description`) for table label accuracy.
-- Derives pre-game team records for completed games from post-game schedule `leagueRecord` values to keep matchup rows spoiler-safe.
-- Computes helper values (lead changes, innings data, etc.) used by ranking.
+Key behavior:
 
-### Ranker Module — `js/mlb/ranker.js`
+- Ranking criteria focus on hockey signals:
+  - one-goal tension
+  - momentum swings
+  - OT/SO drama
+  - goalie workload proxy
+- Parser exposes totals for shots, saves, and power-play goals.
+- Standings-aware division labels are rendered for team context.
 
-Responsibilities:
+## 6. Ranking Criteria by Sport
 
-- Scores games using weighted criteria.
-- Re-sorts games when user toggles ranking criteria.
+- MLB: broad criteria set spanning game dynamics, contextual factors, and statistical factors.
+- NBA: compact three-factor model optimized for scoreboard-only inputs.
+- NHL: four-factor model tuned to hockey scoring/goalie dynamics.
 
-Criteria keys currently used by UI:
+## 7. Filter and Standings Behavior
 
-- `closeGames`
-- `leadChanges`
-- `comebackWins`
-- `lateGameDrama`
-- `extraInnings`
-- `highScoring`
-- `teamRankings`
-- `hits`
-- `errors`
-- `scoringDistribution`
-- `rivalryGame`
-- `playerMilestones`
-- `seasonalContext`
+- Period filter modal supports:
+  - lookback days
+  - team multi-select picker
+  - minimum stars threshold
+- Active filter badge summarizes current range filter and can clear state.
+- Standings modal title/labels switch by active sport.
 
-### Cache Module — `js/mlb/cache.js`
+Sport-specific presentation:
 
-Responsibilities:
+- MLB: full ranking toggle catalog visible.
+- NBA: only core three toggles visible; other categories are hidden when empty.
+- NHL: NHL-specific reduced toggle set is visible.
 
-- In-memory API response caching with expiration.
-- Helper retrieval/write and stale cleanup operations.
+## 8. Runtime Flow
 
-### Utils Module — `js/mlb/utils.js`
-
-Responsibilities:
-
-- Shared formatting and extraction helpers (player names, stats normalization, inning labels, cache key helpers).
-
-## 5. Component Modules
-
-### GameTableRow — `js/mlb/components/GameTableRow.js`
-
-Primary table-row renderer.
-
-Responsibilities:
-
-- Renders summary row and hidden details row.
-- Renders the ranking-row `Type` column using friendly `gameType` labels with WBC-aware disambiguation.
-- Handles row expansion/collapse (single-open behavior).
-- Handles score reveal toggle.
-- Loads and renders lineups + pitchers on demand.
-- Fetches pitcher season stats using the selected game's season year and game type.
-- Resolves pitcher-linked highlight images from `game/{gamePk}/content` and passes them to expanded-row pitcher cards.
-- Normalizes status display (`Final`, `In Progress`, time).
-
-### LineupDisplay — `js/mlb/components/LineupDisplay.js`
-
-Responsibilities:
-
-- Renders lineup table with player rows.
-- Computes/marks hot performer.
-- Opens player detail panel for selected player.
-
-### PitcherDisplay — `js/mlb/components/PitcherDisplay.js`
-
-Responsibilities:
-
-- Renders pitcher summary cards.
-- Supports optional `displayImageUrl` for expanded-row highlight/action photos with headshot fallback.
-- Opens pitcher detail panel.
-
-### PlayerDetailPanel — `js/mlb/components/PlayerDetailPanel.js`
-
-Responsibilities:
-
-- Side panel with detailed batter stats.
-- Team-side aware panel behavior (`away`/`home`).
-- Uses idempotent close lifecycle with timeout/listener cleanup to avoid race-condition null-removal errors.
-
-### PitcherDetailPanel — `js/mlb/components/PitcherDetailPanel.js`
-
-Responsibilities:
-
-- Side panel with detailed pitcher stats.
-- Keeps panel hero image source as MLB headshot URL (unchanged behavior).
-- Uses null-safe stat rendering defaults to prevent missing-stat runtime errors.
-- Fetches and displays team pitcher rankings table.
-- Team pitcher rankings are fetched with season-year + game-type context from the selected game.
-
-### GameCard (Legacy) — `js/mlb/components/GameCard.js`
-
-- Retained in repository for historical/card UI path.
-- Current primary rendering path uses `GameTableRow`.
-
-## 6. HTML Structure (Current)
-
-`index.html` key regions:
-
-- app header/branding,
-- main content rail,
-- table toolbar (date selector + right-aligned ranking trigger),
-- centered ranking modal container,
-- loading/error/empty states,
-- games table mount point (`#games-list`),
-- footer.
-
-## 7. Styling Architecture
-
-### Main Styles — `css/styles.css`
-
-Contains:
-
-- base theme variables and surfaces,
-- table UI styles,
-- ranking modal styles,
-- details row/lineup/pitcher styling,
-- player/pitcher side panel styling,
-- final-pass override sections used to ensure new theme behavior wins over legacy blocks.
-
-### Responsive Styles — `css/responsive.css`
-
-Contains breakpoint behavior for:
-
-- table layout and column visibility,
-- details row spacing,
-- ranking modal sizing/stacking,
-- small-screen behavior.
-
-## 8. Runtime Data Flow
-
-1. `UI.init()` selects date, restores saved ranking options, and triggers load.
-2. `UI.handleLoadGames()` decides completed vs future branch.
-3. `API` fetches schedule + standings.
-4. `Parser` normalizes game objects.
-5. `Ranker` scores completed games based on active criteria.
-6. `UI.displayGames()` renders table rows via `GameTableRow`.
-7. Row expansion triggers async lineup/pitcher loading and nested detail panel interactions.
+1. `js/app.js` resolves sport and bootstraps the matching app module.
+2. Sport `ui.js` initializes controls, restores ranking options, and starts first load.
+3. Sport `api.js` fetches scoreboard/schedule plus standings.
+4. Sport `parser.js` normalizes records to app game models.
+5. Sport `ranker.js` computes excitement scores for completed games.
+6. Sport `components/GameTableRow.js` renders summary rows and expandable details.
 
 ## 9. Maintenance Notes
 
-- `styles.css` currently contains historical and newer style layers. Keep new behavior in final-pass scoped sections unless a full stylesheet cleanup is planned.
-- If styling appears inconsistent, check cascade order near end-of-file override sections first.
-- `GameCard` remains legacy; avoid wiring it back into `ui.js` unless intentionally restoring card view.
+- Keep shell-level behavior in `js/app.js` and avoid sport-specific branching inside league modules where possible.
+- Preserve result-set contract consistency (`GameHeader`, `LineScore`, `GameInfo`) for NBA/NHL parser stability.
+- For UI regressions, inspect late override sections in `css/styles.css` first.
 
-## 10. Recent Changes (2026-03-04)
+## 10. Documentation Change Log Links
 
-This section captures all updates implemented in this chat.
-
-Detailed daily log: [changes-2026-03-04.md](changes-2026-03-04.md)
-Reusable template: [changes-template.md](changes-template.md)
-
-### UI / Styling / Layout
-
-- Styled the table date picker to visually match the table toolbar theme.
-- Increased ranking criteria modal size and readability.
-- Reordered pitcher stat cards so `Games` appears directly to the right of `Home Runs`.
-- Added ranking table `Type` column sourced from schedule `gameType` metadata.
-- Fixed ranking modal vertical drift while expanding rows by reparenting modal node to `document.body`.
-- Added persistence for ranking criteria selections via browser `localStorage` so settings are restored on return visits.
-- Widened both player and pitcher side detail panels.
-- Updated pitcher rankings name column to wrap long names and avoid truncation.
-- Updated expanded game details to use pitcher-linked highlight/action images when available.
-- Added local unknown-player headshot fallback asset at `assets/mlb/unknown-player-headshot.png` for missing pitcher data/image failures.
-- Refreshed box score table styling to better align with the current table/details design language.
-- Increased inning and `R/H/E` header emphasis and added semantic box score header/cell class hooks for stable styling.
-- Standardized box score cell sizing with fixed-size adaptable dimensions so inning/stat cells remain uniform across variable inning counts, including responsive breakpoints.
-- Kept pitcher detail panel image behavior headshot-based for known pitchers.
-
-### Data Correctness and Coverage
-
-- Fixed missing pitcher stats for historical games by querying season stats with the selected game's year (instead of current year).
-- Added `gameType` propagation across parsing and pitcher stat fetch paths to correctly resolve non-regular-season splits (e.g., spring games).
-- Added schedule series metadata preservation and `F`-game disambiguation so World Baseball Classic entries render as `WBC` in the `Type` column.
-- Updated team pitcher ranking fetch to use selected game season + game type context.
-- Expanded schedule source from MLB-only to MLB + International Baseball (`sportId: '1,51'`) so WBC games in the requested window are included in rankings input.
-- Updated completed-game record normalization so matchup-row W-L reflects pre-game records instead of post-game standings values.
-
-### Stability Fixes
-
-- Added null-safe fallback rendering in `PitcherDetailPanel` to prevent `inningsPitched` null dereference crashes.
-- Hardened `PlayerDetailPanel` close lifecycle (idempotent close, timeout tracking, document-click listener cleanup) to prevent `remove()` on null race errors.
-
-### Status/Timezone Behavior
-
-- Schedule day boundaries now follow MLB API timezone semantics (`America/New_York`) to match MLB.com date buckets.
-- Completed-game filtering uses timezone-scoped schedule bucket day (`dates[].date`) instead of browser-local day assumptions.
-- Upcoming-day parsing includes live (`In Progress`) games so in-flight WBC/MLB games remain visible in the selected day view.
-- CET status subline was briefly added and then removed by request; final behavior remains single-line status.
-
-### Documentation Refresh Included
-
-- Updated `readme.md` to reflect the current table-centric experience and controls.
-- Replaced outdated system references with current `js/mlb/*` module paths and active component flow.
+- [changes-2026-03-27.md](changes-2026-03-27.md)
+- [changes-2026-03-05.md](changes-2026-03-05.md)
+- [changes-2026-03-04.md](changes-2026-03-04.md)
+- [changes-template.md](changes-template.md)
