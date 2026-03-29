@@ -93,6 +93,7 @@ export const API = {
             leagueId: '103,104',
             season: date.substring(0, 4),
             date,
+            standingsTypes: 'regularSeason',
             hydrate: 'team,division,league'
         });
     },
@@ -148,6 +149,7 @@ export const API = {
                     conference: leagueName,
                     division: divisionName,
                     divisionRank: Number.parseInt(teamRecord?.divisionRank, 10) || null,
+                    leagueRank: Number.parseInt(teamRecord?.leagueRank, 10) || null,
                     wins: Number.parseInt(teamRecord?.wins, 10) || 0,
                     losses: Number.parseInt(teamRecord?.losses, 10) || 0,
                     winPct: teamRecord?.winningPercentage || null,

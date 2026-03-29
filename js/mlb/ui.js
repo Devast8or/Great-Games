@@ -1423,8 +1423,10 @@ class UI {
                 }
 
                 const divisionRank = Number.parseInt(standing?.divisionRank, 10);
+                const leagueRank = Number.parseInt(standing?.leagueRank, 10);
                 const wins = Number.parseInt(standing?.wins, 10);
                 const losses = Number.parseInt(standing?.losses, 10);
+                const winPct = Number.parseFloat(standing?.winPct);
 
                 return {
                     teamId: numericTeamId,
@@ -1433,8 +1435,10 @@ class UI {
                     conference: this.normalizeLeagueLabel(standing?.conference),
                     division: String(standing?.division || '').trim(),
                     divisionRank: Number.isFinite(divisionRank) && divisionRank > 0 ? divisionRank : Number.MAX_SAFE_INTEGER,
+                    leagueRank: Number.isFinite(leagueRank) && leagueRank > 0 ? leagueRank : Number.MAX_SAFE_INTEGER,
                     wins: Number.isFinite(wins) ? wins : 0,
                     losses: Number.isFinite(losses) ? losses : 0,
+                    winPct: Number.isFinite(winPct) ? winPct : null,
                     highlights: highlightsByTeamId.get(String(numericTeamId)) || []
                 };
             })
@@ -1499,7 +1503,8 @@ class UI {
             }
 
             const rankCell = document.createElement('td');
-            rankCell.textContent = row.divisionRank === Number.MAX_SAFE_INTEGER ? '--' : String(row.divisionRank);
+            const rankValue = Number.parseInt(row?.displayRank ?? row?.divisionRank, 10);
+            rankCell.textContent = Number.isFinite(rankValue) && rankValue > 0 ? String(rankValue) : '--';
             tr.appendChild(rankCell);
 
             const teamCell = document.createElement('td');
@@ -1624,6 +1629,14 @@ class UI {
                 .map((group) => ({
                     title: group.conference,
                     rows: group.rows.slice().sort((left, right) => {
+                        if (left.leagueRank !== right.leagueRank) {
+                            return left.leagueRank - right.leagueRank;
+                        }
+
+                        if (left.winPct !== null && right.winPct !== null && left.winPct !== right.winPct) {
+                            return right.winPct - left.winPct;
+                        }
+
                         if (left.wins !== right.wins) {
                             return right.wins - left.wins;
                         }
@@ -1664,6 +1677,14 @@ class UI {
 
                     return leftConferenceIndex - rightConferenceIndex;
                 });
+
+            orderedGroups = orderedGroups.map((group) => ({
+                ...group,
+                rows: group.rows.map((row) => ({
+                    ...row,
+                    displayRank: row.leagueRank
+                }))
+            }));
         } else {
             this.elements.standingsTableContainer.classList.remove('standings-grid-leagues');
 
@@ -1727,6 +1748,14 @@ class UI {
 
                     return left.division.localeCompare(right.division);
                 });
+
+            orderedGroups = orderedGroups.map((group) => ({
+                ...group,
+                rows: group.rows.map((row) => ({
+                    ...row,
+                    displayRank: row.divisionRank
+                }))
+            }));
         }
 
         if (orderedGroups.length === 0) {
