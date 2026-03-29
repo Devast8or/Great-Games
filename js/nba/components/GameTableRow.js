@@ -51,36 +51,43 @@ class GameTableRow {
 
         const rankCell = document.createElement('td');
         rankCell.className = 'col-rank';
+        rankCell.dataset.label = 'Rank';
         rankCell.textContent = this.options.rank || '-';
 
         const matchupCell = document.createElement('td');
         matchupCell.className = 'col-matchup';
+        matchupCell.dataset.label = 'Matchup';
         matchupCell.appendChild(this.createMatchupElement());
 
         let playedDateCell = null;
         if (this.options.showPlayedDate) {
             playedDateCell = document.createElement('td');
             playedDateCell.className = 'col-context col-played-date';
+            playedDateCell.dataset.label = 'Date';
             playedDateCell.textContent = this.getPlayedDateText();
             playedDateCell.title = playedDateCell.textContent;
         }
 
         const gameTypeCell = document.createElement('td');
         gameTypeCell.className = 'col-game-type';
+        gameTypeCell.dataset.label = 'Type';
         gameTypeCell.textContent = this.game.gameType || 'Regular';
         gameTypeCell.title = `Game Type: ${gameTypeCell.textContent}`;
 
         const ratingCell = document.createElement('td');
         ratingCell.className = 'col-rating';
+        ratingCell.dataset.label = 'Rating';
         ratingCell.textContent = this.game.isFuture ? '-' : this.getStarRating();
 
         const statusCell = document.createElement('td');
         statusCell.className = 'col-status';
+        statusCell.dataset.label = 'Status';
         statusCell.textContent = this.getStatusText();
         statusCell.title = statusCell.textContent;
 
         const expandCell = document.createElement('td');
         expandCell.className = 'col-expand';
+        expandCell.dataset.label = 'Details';
 
         this.expandIcon = document.createElement('span');
         this.expandIcon.className = 'row-expand-icon';
