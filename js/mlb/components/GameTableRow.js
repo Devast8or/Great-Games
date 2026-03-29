@@ -61,14 +61,17 @@ class GameTableRow {
 
         const rankCell = document.createElement('td');
         rankCell.className = 'col-rank';
+        rankCell.dataset.label = 'Rank';
         rankCell.textContent = this.options.rank || '-';
 
         const matchupCell = document.createElement('td');
         matchupCell.className = 'col-matchup';
+        matchupCell.dataset.label = 'Matchup';
         matchupCell.appendChild(this.createMatchupElement());
 
         const contextCell = document.createElement('td');
         contextCell.className = 'col-context';
+        contextCell.dataset.label = this.options.showPlayedDate ? 'Date' : 'Venue';
 
         if (this.options.showPlayedDate) {
             contextCell.classList.add('col-played-date');
@@ -83,20 +86,24 @@ class GameTableRow {
         const gameType = this.getGameTypeText();
         const gameTypeCell = document.createElement('td');
         gameTypeCell.className = 'col-game-type';
+        gameTypeCell.dataset.label = 'Type';
         gameTypeCell.textContent = gameType.label;
         gameTypeCell.title = gameType.title;
 
         const ratingCell = document.createElement('td');
         ratingCell.className = 'col-rating';
+        ratingCell.dataset.label = 'Rating';
         ratingCell.textContent = this.game.isFuture ? '-' : this.getStarRating();
 
         const statusCell = document.createElement('td');
         statusCell.className = 'col-status';
+        statusCell.dataset.label = 'Status';
         statusCell.textContent = this.getStatusText();
         statusCell.title = statusCell.textContent;
 
         const expandCell = document.createElement('td');
         expandCell.className = 'col-expand';
+        expandCell.dataset.label = 'Details';
         this.expandIcon = document.createElement('span');
         this.expandIcon.className = 'row-expand-icon';
         this.expandIcon.textContent = '▼';
@@ -303,12 +310,14 @@ class GameTableRow {
         this.mainRow.setAttribute('aria-expanded', 'true');
         this.expandIcon.textContent = '▲';
 
+        const shouldShowLineups = this.shouldShowLineups();
+
         if (this.loadingDetails) {
             this.showDetailsLoading();
             return;
         }
 
-        if (this.pitchersLoaded && this.lineupsLoaded && this.pitcherHighlightImagesLoaded) {
+        if (this.pitchersLoaded && (shouldShowLineups ? this.lineupsLoaded : true) && this.pitcherHighlightImagesLoaded) {
             this.hideDetailsLoading();
             return;
         }
@@ -323,7 +332,7 @@ class GameTableRow {
                 loadingTasks.push(this.loadPitchersData());
             }
 
-            if (!this.lineupsLoaded) {
+            if (shouldShowLineups && !this.lineupsLoaded) {
                 loadingTasks.push(this.loadLineupsData());
             }
 
@@ -334,14 +343,18 @@ class GameTableRow {
             await Promise.all(loadingTasks);
 
             this.renderPitchers(this.detailsContainer);
-            this.renderLineups(this.detailsContainer);
+            if (shouldShowLineups) {
+                this.renderLineups(this.detailsContainer);
+            }
             this.hideDetailsLoading();
         } catch (error) {
             console.error('Error loading game details:', error);
             this.game.awayTeam.lineup = this.game.awayTeam.lineup || [];
             this.game.homeTeam.lineup = this.game.homeTeam.lineup || [];
             this.renderPitchers(this.detailsContainer);
-            this.renderLineups(this.detailsContainer);
+            if (shouldShowLineups) {
+                this.renderLineups(this.detailsContainer);
+            }
             this.showDetailsError('Some information is Not Avaliable.');
         }
 
@@ -366,7 +379,7 @@ class GameTableRow {
         }
 
         if (this.lineupsContainer) {
-            this.lineupsContainer.classList.remove('hidden');
+            this.lineupsContainer.classList.toggle('hidden', !this.shouldShowLineups());
         }
     }
 
@@ -378,8 +391,16 @@ class GameTableRow {
         }
 
         if (this.lineupsContainer) {
-            this.lineupsContainer.classList.remove('hidden');
+            this.lineupsContainer.classList.toggle('hidden', !this.shouldShowLineups());
         }
+    }
+
+    shouldShowLineups() {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return true;
+        }
+
+        return !window.matchMedia('(max-width: 768px) and (hover: none) and (pointer: coarse)').matches;
     }
 
     collapse() {
