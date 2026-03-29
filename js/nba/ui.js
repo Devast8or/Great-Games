@@ -892,8 +892,9 @@ class UI {
             return '';
         }
 
-        const nextSeasonSuffix = String(season + 1).slice(-2);
-        return `${season}-${nextSeasonSuffix}`;
+        const seasonStart = season - 1;
+        const seasonEndSuffix = String(season).slice(-2);
+        return `${seasonStart}-${seasonEndSuffix}`;
     }
 
     formatStandingsWinPct(value) {
@@ -1013,8 +1014,21 @@ class UI {
                     return left.conferenceRank - right.conferenceRank;
                 }
 
+                const leftWinPct = Number.parseFloat(left.winPct);
+                const rightWinPct = Number.parseFloat(right.winPct);
+                const leftHasWinPct = Number.isFinite(leftWinPct);
+                const rightHasWinPct = Number.isFinite(rightWinPct);
+
+                if (leftHasWinPct && rightHasWinPct && leftWinPct !== rightWinPct) {
+                    return rightWinPct - leftWinPct;
+                }
+
                 if (left.wins !== right.wins) {
                     return right.wins - left.wins;
+                }
+
+                if (left.losses !== right.losses) {
+                    return left.losses - right.losses;
                 }
 
                 return left.teamName.localeCompare(right.teamName);

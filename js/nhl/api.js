@@ -155,7 +155,8 @@ export const API = {
 
         const month = parsed.getUTCMonth() + 1;
         const year = parsed.getUTCFullYear();
-        return month >= 7 ? year : year - 1;
+        // ESPN standings season is keyed by season end year (e.g., 2025-26 => 2026).
+        return month >= 7 ? year + 1 : year;
     },
 
     async fetchJsonWithTimeout(url, timeoutMs = this.DEFAULT_REQUEST_TIMEOUT_MS) {
@@ -315,7 +316,7 @@ export const API = {
             const conference = toText(group?.name, 'League');
             const entries = Array.isArray(group?.standings?.entries) ? group.standings.entries : [];
 
-            entries.forEach((entry) => {
+            entries.forEach((entry, index) => {
                 const team = entry?.team || {};
                 const teamId = toInteger(team?.id, 0);
                 if (teamId <= 0) {
@@ -327,8 +328,9 @@ export const API = {
                 const losses = toInteger(this.getStandingsStatValue(stats, ['losses', 'l'], 0), 0);
                 const otLosses = toInteger(this.getStandingsStatValue(stats, ['otlosses', 'otl'], 0), 0);
                 const points = toInteger(this.getStandingsStatValue(stats, ['points', 'pts'], 0), 0);
-                const conferenceRank = toInteger(this.getStandingsStatValue(stats, ['rank', 'playoffseed', 'seed'], 0), 0);
+                const conferenceRank = toInteger(this.getStandingsStatValue(stats, ['rank', 'playoffseed', 'seed', 'pos'], 0), 0);
                 const divisionRank = toInteger(this.getStandingsStatValue(stats, ['divisionrank', 'divrank'], 0), 0);
+                const fallbackConferenceRank = index + 1;
 
                 mapped[String(teamId)] = {
                     teamId,
@@ -338,7 +340,7 @@ export const API = {
                     conference,
                     division: toText(team?.division?.name || group?.abbreviation),
                     divisionRank: divisionRank > 0 ? divisionRank : null,
-                    conferenceRank: conferenceRank > 0 ? conferenceRank : null,
+                    conferenceRank: conferenceRank > 0 ? conferenceRank : fallbackConferenceRank,
                     wins,
                     losses,
                     otLosses,
@@ -360,7 +362,7 @@ export const API = {
 
         const cacheKey = Utils.createCacheKey('espn-nhl-standings', { season: normalizedSeason });
         return this.cache.getOrFetch(cacheKey, async () => {
-            const url = `https://site.api.espn.com/apis/v2/sports/hockey/nhl/standings?season=${normalizedSeason}`;
+            const url = `https://site.api.espn.com/apis/v2/sports/hockey/nhl/standings?season=${normalizedSeason}&seasontype=2`;
             const payload = await this.fetchJsonWithTimeout(url, 12000);
             return this.mapStandingsByTeam(payload);
         });

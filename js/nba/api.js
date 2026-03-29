@@ -128,7 +128,8 @@ export const API = {
 
         const month = parsed.getUTCMonth() + 1;
         const year = parsed.getUTCFullYear();
-        return month >= 7 ? year : year - 1;
+        // ESPN standings season is keyed by season end year (e.g., 2025-26 => 2026).
+        return month >= 7 ? year + 1 : year;
     },
 
     parseNullableScore(value) {
@@ -235,7 +236,7 @@ export const API = {
                 : [];
             const season = toInteger(conferenceEntry?.standings?.season || payload?.season?.year, 0);
 
-            standings.forEach((entry) => {
+            standings.forEach((entry, index) => {
                 const team = entry?.team || {};
                 const teamId = this.resolveNbaTeamId(team);
                 if (!teamId) {
@@ -250,10 +251,14 @@ export const API = {
                 const stats = Array.isArray(entry?.stats) ? entry.stats : [];
                 const wins = toInteger(this.getEspnStatValue(stats, ['wins', 'w'], 0), 0);
                 const losses = toInteger(this.getEspnStatValue(stats, ['losses', 'l'], 0), 0);
-                const conferenceRank = toInteger(this.getEspnStatValue(stats, ['playoffseed', 'pos', 'seed'], 0), 0);
-                const rawWinPct = this.getEspnStatValue(stats, ['winpercent', 'pct'], '');
+                const conferenceRank = toInteger(
+                    this.getEspnStatValue(stats, ['playoffseed', 'rank', 'pos', 'seed'], 0),
+                    0
+                );
+                const rawWinPct = this.getEspnStatValue(stats, ['winpercent', 'leaguewinpercent', 'pct'], '');
                 const parsedWinPct = Number.parseFloat(rawWinPct);
                 const points = Number.parseFloat(this.getEspnStatValue(stats, ['pointsfor', 'pf'], ''));
+                const fallbackConferenceRank = index + 1;
 
                 mapped[String(teamId)] = {
                     teamId,
@@ -263,7 +268,7 @@ export const API = {
                     conference: conferenceName,
                     division: '',
                     divisionRank: null,
-                    conferenceRank: conferenceRank > 0 ? conferenceRank : null,
+                    conferenceRank: conferenceRank > 0 ? conferenceRank : fallbackConferenceRank,
                     wins,
                     losses,
                     winPct: Number.isFinite(parsedWinPct) ? parsedWinPct : null,
@@ -290,6 +295,7 @@ export const API = {
         return this.cache.getOrFetch(cacheKey, async () => {
             const url = new URL('https://site.api.espn.com/apis/v2/sports/basketball/nba/standings');
             url.searchParams.set('season', String(normalizedSeason));
+            url.searchParams.set('seasontype', '2');
             const payload = await this.fetchPublicJsonWithTimeout(url.toString(), 12000);
             return this.mapEspnStandingsByTeam(payload);
         });
