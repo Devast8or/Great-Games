@@ -1387,13 +1387,9 @@ class UI {
         } else if (this.isMixedScheduleView(displayGames)) {
             const completedGames = displayGames.filter((game) => !game?.isFuture);
             const rankedCompletedGames = Ranker.rankGames(completedGames, rankingOptions);
-            const rankedById = new Map();
+            const futureOrLiveGames = displayGames.filter((game) => game?.isFuture);
 
-            rankedCompletedGames.forEach((game) => {
-                rankedById.set(Number(game.id), game);
-            });
-
-            displayGames = displayGames.map((game) => rankedById.get(Number(game.id)) || game);
+            displayGames = [...rankedCompletedGames, ...futureOrLiveGames];
         }
 
         return displayGames.slice(0, 3).reduce((highlights, game, index) => {
@@ -1783,8 +1779,8 @@ class UI {
             const options = this.getRankingOptions();
             const completedGames = displayGames.filter((game) => !game?.isFuture);
             const rankedCompletedGames = Ranker.rankGames(completedGames, options);
-            const rankedCompletedById = new Map();
             rankByGameId = new Map();
+            const futureOrLiveGames = displayGames.filter((game) => game?.isFuture);
 
             rankedCompletedGames.forEach((game, index) => {
                 const gameId = Number(game?.id);
@@ -1792,19 +1788,10 @@ class UI {
                     return;
                 }
 
-                rankedCompletedById.set(gameId, game);
                 rankByGameId.set(gameId, index + 1);
             });
 
-            // Keep schedule order, but replace completed entries with ranked-scored copies.
-            displayGames = displayGames.map((game) => {
-                const gameId = Number(game?.id);
-                if (!Number.isFinite(gameId)) {
-                    return game;
-                }
-
-                return rankedCompletedById.get(gameId) || game;
-            });
+            displayGames = [...rankedCompletedGames, ...futureOrLiveGames];
         }
 
         if (!displayGames.length) {

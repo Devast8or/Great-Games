@@ -945,13 +945,9 @@ class UI {
         } else if (this.isMixedScheduleView(displayGames)) {
             const completedGames = displayGames.filter((game) => !game?.isFuture);
             const rankedCompletedGames = Ranker.rankGames(completedGames, rankingOptions);
-            const rankedById = new Map();
+            const futureOrLiveGames = displayGames.filter((game) => game?.isFuture);
 
-            rankedCompletedGames.forEach((game) => {
-                rankedById.set(String(game.id), game);
-            });
-
-            displayGames = displayGames.map((game) => rankedById.get(String(game.id)) || game);
+            displayGames = [...rankedCompletedGames, ...futureOrLiveGames];
         }
 
         return displayGames.slice(0, 3).reduce((highlights, game, index) => {
@@ -1363,17 +1359,16 @@ class UI {
         } else if (this.isMixedScheduleView(displayGames)) {
             const completedGames = displayGames.filter((game) => !game?.isFuture);
             const rankedCompletedGames = Ranker.rankGames(completedGames, rankingOptions);
-            const rankedById = new Map();
             rankByGameId = new Map();
             rankedGamesForDebug = rankedCompletedGames;
+            const futureOrLiveGames = displayGames.filter((game) => game?.isFuture);
 
             rankedCompletedGames.forEach((game, index) => {
                 const key = String(game.id);
-                rankedById.set(key, game);
                 rankByGameId.set(key, index + 1);
             });
 
-            displayGames = displayGames.map((game) => rankedById.get(String(game.id)) || game);
+            displayGames = [...rankedCompletedGames, ...futureOrLiveGames];
         }
 
         if (shouldLogDebug) {
