@@ -1308,7 +1308,7 @@ class UI {
 
     normalizeStandingsDisplayMode(value) {
         const normalized = String(value || '').trim().toLowerCase();
-        if (normalized === 'leagues') {
+        if (normalized === 'leagues' || normalized === 'playoff-picture') {
             return normalized;
         }
 
@@ -1325,16 +1325,36 @@ class UI {
             return;
         }
 
-        let control = standingsContent.querySelector('.standings-league-switch');
+        let controlsRow = standingsContent.querySelector('.standings-modal-controls-mlb');
+        if (!controlsRow) {
+            controlsRow = document.createElement('div');
+            controlsRow.className = 'standings-modal-controls standings-modal-controls-mlb';
+            standingsContent.insertBefore(controlsRow, this.elements.standingsTableState);
+        }
+
+        controlsRow.classList.remove('hidden');
+        controlsRow.setAttribute('aria-hidden', 'false');
+
+        // Remove any stale/shared switches that may have been created by other sport modes.
+        controlsRow.querySelectorAll('.standings-league-switch:not(.standings-league-switch-mlb)').forEach((node) => {
+            node.remove();
+        });
+        standingsContent.querySelectorAll('.standings-modal-controls-nhl').forEach((node) => {
+            node.remove();
+        });
+
+        let control = controlsRow.querySelector('.standings-league-switch-mlb');
+
         if (!control) {
             control = document.createElement('div');
-            control.className = 'standings-league-switch';
+            control.className = 'standings-league-switch standings-league-switch-mlb';
             control.setAttribute('role', 'group');
             control.setAttribute('aria-label', 'Standings league filter');
 
             [
                 { value: 'divisions', label: 'Divisions' },
-                { value: 'leagues', label: 'Leagues' }
+                { value: 'leagues', label: 'Leagues' },
+                { value: 'playoff-picture', label: 'Playoff Picture' }
             ].forEach((option) => {
                 const button = document.createElement('button');
                 button.type = 'button';
@@ -1353,7 +1373,30 @@ class UI {
                 control.appendChild(button);
             });
 
-            standingsContent.insertBefore(control, this.elements.standingsTableState);
+            controlsRow.appendChild(control);
+        }
+
+        const existingModes = new Set(
+            Array.from(control.querySelectorAll('.standings-league-btn'))
+                .map((button) => String(button.dataset?.standingsMode || '').trim())
+        );
+
+        if (!existingModes.has('playoff-picture')) {
+            const playoffButton = document.createElement('button');
+            playoffButton.type = 'button';
+            playoffButton.className = 'standings-league-btn';
+            playoffButton.dataset.standingsMode = 'playoff-picture';
+            playoffButton.textContent = 'Playoff Picture';
+            playoffButton.addEventListener('click', () => {
+                const nextMode = this.normalizeStandingsDisplayMode('playoff-picture');
+                if (this.standingsDisplayMode === nextMode) {
+                    return;
+                }
+
+                this.standingsDisplayMode = nextMode;
+                this.renderStandingsTable();
+            });
+            control.appendChild(playoffButton);
         }
 
         const activeMode = this.normalizeStandingsDisplayMode(this.standingsDisplayMode);
@@ -1551,6 +1594,346 @@ class UI {
         return section;
     }
 
+    buildMlbPlayoffPictureGroups(standingsRows = []) {
+        if (!Array.isArray(standingsRows) || standingsRows.length === 0) {
+            return [];
+        }
+
+        const leagueOrder = ['American League', 'National League'];
+
+        const compareRows = (left, right) => {
+            const leftWinPct = Number.parseFloat(left?.winPct);
+            const rightWinPct = Number.parseFloat(right?.winPct);
+            const leftHasWinPct = Number.isFinite(leftWinPct);
+            const rightHasWinPct = Number.isFinite(rightWinPct);
+
+            if (leftHasWinPct && rightHasWinPct && leftWinPct !== rightWinPct) {
+                return rightWinPct - leftWinPct;
+            }
+
+            if (left.wins !== right.wins) {
+                return right.wins - left.wins;
+            }
+
+            if (left.losses !== right.losses) {
+                return left.losses - right.losses;
+            }
+
+            if (left.leagueRank !== right.leagueRank) {
+                return left.leagueRank - right.leagueRank;
+            }
+
+            return left.teamName.localeCompare(right.teamName);
+        };
+
+        const groupedByLeague = standingsRows.reduce((groups, row) => {
+            const conference = row.conference || 'League';
+            if (!groups.has(conference)) {
+                groups.set(conference, []);
+            }
+
+            groups.get(conference).push(row);
+            return groups;
+        }, new Map());
+
+        return Array.from(groupedByLeague.entries())
+            .sort((left, right) => {
+                const leftIndex = leagueOrder.indexOf(left[0]);
+                const rightIndex = leagueOrder.indexOf(right[0]);
+
+                if (leftIndex === -1 && rightIndex === -1) {
+                    return String(left[0]).localeCompare(String(right[0]));
+                }
+
+                if (leftIndex === -1) {
+                    return 1;
+                }
+
+                if (rightIndex === -1) {
+                    return -1;
+                }
+
+                return leftIndex - rightIndex;
+            })
+            .map(([conference, leagueRows]) => {
+                const rowsByDivision = leagueRows.reduce((groups, row) => {
+                    const division = row.division || 'Division';
+                    if (!groups.has(division)) {
+                        groups.set(division, []);
+                    }
+
+                    groups.get(division).push(row);
+                    return groups;
+                }, new Map());
+
+                const divisionWinners = Array.from(rowsByDivision.values())
+                    .map((divisionRows) => divisionRows
+                        .slice()
+                        .sort((left, right) => {
+                            if (left.divisionRank !== right.divisionRank) {
+                                return left.divisionRank - right.divisionRank;
+                            }
+
+                            return compareRows(left, right);
+                        })[0])
+                    .filter(Boolean)
+                    .sort(compareRows)
+                    .slice(0, 3);
+
+                const divisionWinnerIds = new Set(divisionWinners.map((row) => row.teamId));
+                const wildCards = leagueRows
+                    .filter((row) => !divisionWinnerIds.has(row.teamId))
+                    .slice()
+                    .sort(compareRows)
+                    .slice(0, 3);
+
+                const seedMap = new Map();
+                if (divisionWinners[0]) {
+                    seedMap.set(1, divisionWinners[0]);
+                }
+                if (divisionWinners[1]) {
+                    seedMap.set(2, divisionWinners[1]);
+                }
+                if (divisionWinners[2]) {
+                    seedMap.set(3, divisionWinners[2]);
+                }
+                if (wildCards[0]) {
+                    seedMap.set(4, wildCards[0]);
+                }
+                if (wildCards[1]) {
+                    seedMap.set(5, wildCards[1]);
+                }
+                if (wildCards[2]) {
+                    seedMap.set(6, wildCards[2]);
+                }
+
+                return {
+                    title: conference,
+                    seedMap
+                };
+            });
+    }
+
+    getMlbBracketTeamDisplay(seedMap, seedNumber, options = {}) {
+        if (!(seedMap instanceof Map)) {
+            return {
+                label: options.fallbackLabel || `Seed ${seedNumber} TBD`,
+                rankLabel: '',
+                abbreviation: '',
+                logoUrl: null
+            };
+        }
+
+        const row = seedMap.get(seedNumber);
+        if (!row) {
+            return {
+                label: options.fallbackLabel || `Seed ${seedNumber} TBD`,
+                rankLabel: '',
+                abbreviation: '',
+                logoUrl: null
+            };
+        }
+
+        const abbreviation = String(row.abbreviation || '').trim().toUpperCase();
+        const resolvedAbbreviation = abbreviation
+            || String(row.teamName || '').trim().slice(0, 3).toUpperCase()
+            || 'TBD';
+        const includeSeedPrefix = options.includeSeedPrefix !== false;
+        const rankLabel = includeSeedPrefix ? `${seedNumber}.` : '';
+        const teamId = Number.parseInt(row?.teamId, 10);
+
+        return {
+            label: includeSeedPrefix ? `${rankLabel} ${resolvedAbbreviation}` : resolvedAbbreviation,
+            rankLabel,
+            abbreviation: resolvedAbbreviation,
+            logoUrl: Number.isFinite(teamId) && teamId > 0
+                ? (typeof API.getTeamLogoUrl === 'function' ? API.getTeamLogoUrl(teamId) : null)
+                : null
+        };
+    }
+
+    createMlbBracketMatchCard({ title, topTeam, bottomTeam, note = '', flowLines = [] }) {
+        const card = document.createElement('article');
+        card.className = 'playoff-match-card';
+
+        const cardTitle = document.createElement('h5');
+        cardTitle.className = 'playoff-match-title';
+        cardTitle.textContent = title;
+        card.appendChild(cardTitle);
+
+        const teams = document.createElement('div');
+        teams.className = 'playoff-match-teams';
+
+        const topTeamEl = document.createElement('div');
+        topTeamEl.className = 'playoff-match-team';
+        if (topTeam && typeof topTeam === 'object') {
+            if (topTeam.rankLabel) {
+                const rank = document.createElement('span');
+                rank.className = 'playoff-match-team-rank';
+                rank.textContent = topTeam.rankLabel;
+                topTeamEl.appendChild(rank);
+            }
+
+            if (topTeam.logoUrl) {
+                const logo = document.createElement('img');
+                logo.className = 'playoff-match-team-logo';
+                logo.src = topTeam.logoUrl;
+                logo.alt = '';
+                logo.loading = 'lazy';
+                logo.decoding = 'async';
+                topTeamEl.appendChild(logo);
+            }
+
+            const text = document.createElement('span');
+            text.className = 'playoff-match-team-label';
+            text.textContent = String(topTeam.abbreviation || topTeam.label || '').trim() || 'TBD';
+            topTeamEl.appendChild(text);
+        } else {
+            topTeamEl.textContent = String(topTeam || '').trim() || 'TBD';
+        }
+
+        const bottomTeamEl = document.createElement('div');
+        bottomTeamEl.className = 'playoff-match-team';
+        if (bottomTeam && typeof bottomTeam === 'object') {
+            if (bottomTeam.rankLabel) {
+                const rank = document.createElement('span');
+                rank.className = 'playoff-match-team-rank';
+                rank.textContent = bottomTeam.rankLabel;
+                bottomTeamEl.appendChild(rank);
+            }
+
+            if (bottomTeam.logoUrl) {
+                const logo = document.createElement('img');
+                logo.className = 'playoff-match-team-logo';
+                logo.src = bottomTeam.logoUrl;
+                logo.alt = '';
+                logo.loading = 'lazy';
+                logo.decoding = 'async';
+                bottomTeamEl.appendChild(logo);
+            }
+
+            const text = document.createElement('span');
+            text.className = 'playoff-match-team-label';
+            text.textContent = String(bottomTeam.abbreviation || bottomTeam.label || '').trim() || 'TBD';
+            bottomTeamEl.appendChild(text);
+        } else {
+            bottomTeamEl.textContent = String(bottomTeam || '').trim() || 'TBD';
+        }
+
+        teams.appendChild(topTeamEl);
+        teams.appendChild(bottomTeamEl);
+        card.appendChild(teams);
+
+        if (note) {
+            const noteEl = document.createElement('p');
+            noteEl.className = 'playoff-match-note';
+            noteEl.textContent = note;
+            card.appendChild(noteEl);
+        }
+
+        if (Array.isArray(flowLines) && flowLines.length > 0) {
+            const flowWrap = document.createElement('div');
+            flowWrap.className = 'playoff-match-flow';
+
+            flowLines.forEach((line) => {
+                const normalizedLine = String(line || '').trim();
+                if (!normalizedLine) {
+                    return;
+                }
+
+                const flowLine = document.createElement('p');
+                flowLine.className = 'playoff-match-flow-line';
+                flowLine.textContent = normalizedLine;
+                flowWrap.appendChild(flowLine);
+            });
+
+            if (flowWrap.childElementCount > 0) {
+                card.appendChild(flowWrap);
+            }
+        }
+
+        return card;
+    }
+
+    createMlbPlayoffPictureSection(title, seedMap) {
+        const section = document.createElement('section');
+        section.className = 'standings-conference panel-surface';
+        const isNationalLeague = /national/i.test(String(title || ''));
+
+        const heading = document.createElement('h4');
+        heading.textContent = title;
+        section.appendChild(heading);
+
+        const bracket = document.createElement('div');
+        bracket.className = 'standings-playoff-bracket standings-playoff-bracket-mlb';
+        if (isNationalLeague) {
+            bracket.classList.add('standings-playoff-bracket-mlb-nl');
+        }
+
+        const bracketMeta = document.createElement('p');
+        bracketMeta.className = 'standings-playoff-bracket-meta';
+        bracketMeta.textContent = 'Wild Card round feeds Division Series; top two division winners receive byes.';
+        bracket.appendChild(bracketMeta);
+
+        const rounds = document.createElement('div');
+        rounds.className = 'standings-playoff-rounds';
+        if (isNationalLeague) {
+            rounds.classList.add('standings-playoff-rounds-reverse');
+        }
+
+        const wildCardRound = document.createElement('section');
+        wildCardRound.className = 'standings-playoff-round standings-playoff-round--wildcard';
+        const wildCardHeading = document.createElement('h5');
+        wildCardHeading.textContent = 'Wild Card Round';
+        wildCardRound.appendChild(wildCardHeading);
+        wildCardRound.appendChild(this.createMlbBracketMatchCard({
+            title: 'Series A (3 vs 6)',
+            topTeam: this.getMlbBracketTeamDisplay(seedMap, 3),
+            bottomTeam: this.getMlbBracketTeamDisplay(seedMap, 6),
+            note: 'Best of 3',
+            flowLines: ['Winner -> Division Series vs Seed 2']
+        }));
+        wildCardRound.appendChild(this.createMlbBracketMatchCard({
+            title: 'Series B (4 vs 5)',
+            topTeam: this.getMlbBracketTeamDisplay(seedMap, 4),
+            bottomTeam: this.getMlbBracketTeamDisplay(seedMap, 5),
+            note: 'Best of 3',
+            flowLines: ['Winner -> Division Series vs Seed 1']
+        }));
+
+        const divisionRound = document.createElement('section');
+        divisionRound.className = 'standings-playoff-round standings-playoff-round--division';
+        const divisionHeading = document.createElement('h5');
+        divisionHeading.textContent = 'Division Series';
+        divisionRound.appendChild(divisionHeading);
+        divisionRound.appendChild(this.createMlbBracketMatchCard({
+            title: 'DS Matchup 1',
+            topTeam: this.getMlbBracketTeamDisplay(seedMap, 1),
+            bottomTeam: 'Winner of Series B',
+            note: 'Best of 5',
+            flowLines: ['Seed 1 spot is highest division winner']
+        }));
+        divisionRound.appendChild(this.createMlbBracketMatchCard({
+            title: 'DS Matchup 2',
+            topTeam: this.getMlbBracketTeamDisplay(seedMap, 2),
+            bottomTeam: 'Winner of Series A',
+            note: 'Best of 5',
+            flowLines: ['Seed 2 spot is second-highest division winner']
+        }));
+
+        if (isNationalLeague) {
+            rounds.appendChild(divisionRound);
+            rounds.appendChild(wildCardRound);
+        } else {
+            rounds.appendChild(wildCardRound);
+            rounds.appendChild(divisionRound);
+        }
+        bracket.appendChild(rounds);
+        section.appendChild(bracket);
+
+        return section;
+    }
+
     renderStandingsTable() {
         this.renderStandingsLeagueFilterControl();
 
@@ -1563,6 +1946,10 @@ class UI {
             const seasonLabel = this.formatSeasonLabel(this.standingsSeason);
             if (seasonLabel) {
                 subtitleParts.push(`Season: ${seasonLabel}`);
+            }
+
+            if (this.normalizeStandingsDisplayMode(this.standingsDisplayMode) === 'playoff-picture') {
+                subtitleParts.push('Projected playoff field from current standings (top 3 division winners + 3 wild cards per league).');
             }
 
             this.elements.standingsModalSubtitle.textContent = subtitleParts.length > 0
@@ -1609,7 +1996,10 @@ class UI {
 
         let orderedGroups = [];
 
-        if (displayMode === 'leagues') {
+        if (displayMode === 'playoff-picture') {
+            this.elements.standingsTableContainer.classList.add('standings-grid-leagues');
+            orderedGroups = this.buildMlbPlayoffPictureGroups(standingsRows);
+        } else if (displayMode === 'leagues') {
             this.elements.standingsTableContainer.classList.add('standings-grid-leagues');
 
             const groupedByLeague = standingsRows.reduce((groups, row) => {
@@ -1766,7 +2156,11 @@ class UI {
         }
 
         orderedGroups.forEach((group) => {
-            this.elements.standingsTableContainer.appendChild(this.createStandingsSection(group.title, group.rows));
+            if (displayMode === 'playoff-picture') {
+                this.elements.standingsTableContainer.appendChild(this.createMlbPlayoffPictureSection(group.title, group.seedMap));
+            } else {
+                this.elements.standingsTableContainer.appendChild(this.createStandingsSection(group.title, group.rows));
+            }
         });
 
         this.elements.standingsTableState.classList.add('hidden');

@@ -18,6 +18,8 @@ class UI {
             standingsModal: document.getElementById('standings-modal'),
             openStandingsBtn: document.getElementById('open-standings'),
             closeStandingsBtn: document.getElementById('close-standings-modal'),
+            standingsViewStandingsBtn: document.getElementById('standings-view-standings'),
+            standingsViewPlayoffBtn: document.getElementById('standings-view-playoff'),
             standingsModalSubtitle: document.getElementById('standings-modal-subtitle'),
             standingsTableState: document.getElementById('standings-table-state'),
             standingsTableContainer: document.getElementById('standings-table-container'),
@@ -63,6 +65,7 @@ class UI {
         this.standingsSeason = null;
         this.standingsDateLabel = '';
         this.standingsLoading = false;
+        this.standingsViewMode = 'standings';
     }
 
     init() {
@@ -166,6 +169,19 @@ class UI {
                 }
             });
         }
+
+        [this.elements.standingsViewStandingsBtn, this.elements.standingsViewPlayoffBtn]
+            .filter(Boolean)
+            .forEach((button) => {
+                button.addEventListener('click', () => {
+                    const requestedMode = String(button.dataset?.standingsView || '').trim();
+                    this.standingsViewMode = requestedMode === 'playoff-picture'
+                        ? 'playoff-picture'
+                        : 'standings';
+                    this.renderStandingsTable();
+                });
+            });
+
         if (this.elements.openPeriodFilterBtn) {
             this.elements.openPeriodFilterBtn.addEventListener('click', () => {
                 this.togglePeriodFilterModal(true);
@@ -920,6 +936,21 @@ class UI {
         return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(1);
     }
 
+    isPlayoffPhaseForSelectedDate() {
+        const parsedDate = this.parseLocalDate(this.standingsDateLabel);
+        if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
+            return false;
+        }
+
+        const month = parsedDate.getMonth() + 1;
+        const day = parsedDate.getDate();
+        if (month === 4) {
+            return day >= 10;
+        }
+
+        return month === 5 || month === 6;
+    }
+
     buildStandingsHighlightMap() {
         if (!Array.isArray(this.games) || this.games.length === 0) {
             return new Map();
@@ -1035,6 +1066,28 @@ class UI {
             });
     }
 
+    buildPlayoffPictureRows() {
+        const standingsRows = this.buildStandingsRows();
+        if (!Array.isArray(standingsRows) || standingsRows.length === 0) {
+            return [];
+        }
+
+        const isPlayoffPhase = this.isPlayoffPhaseForSelectedDate();
+
+        return standingsRows
+            .filter((row) => row.conference === 'Eastern Conference' || row.conference === 'Western Conference')
+            .filter((row) => Number.isFinite(row.conferenceRank) && row.conferenceRank > 0 && row.conferenceRank <= 10)
+            .map((row) => ({
+                ...row,
+                playoffStatus: row.conferenceRank <= 6
+                    ? (isPlayoffPhase ? 'In Playoffs' : 'Would Make Playoffs')
+                    : (isPlayoffPhase ? 'In Play-In' : 'Would Make Play-In'),
+                playoffStatusClass: row.conferenceRank <= 6
+                    ? 'standings-playoff-status-auto'
+                    : 'standings-playoff-status-playin'
+            }));
+    }
+
     createStandingsSection(title, rows) {
         const section = document.createElement('section');
         section.className = 'standings-conference panel-surface';
@@ -1122,6 +1175,286 @@ class UI {
         return section;
     }
 
+    buildPlayoffSeedMap(rows = []) {
+        return rows.reduce((seedMap, row) => {
+            const rank = Number.parseInt(row?.conferenceRank, 10);
+            if (Number.isFinite(rank) && rank > 0) {
+                seedMap.set(rank, row);
+            }
+
+            return seedMap;
+        }, new Map());
+    }
+
+    getBracketTeamDisplay(seedMap, seedNumber, options = {}) {
+        const row = seedMap.get(seedNumber);
+        if (!row) {
+            return {
+                label: options.fallbackLabel || `Seed ${seedNumber}`,
+                rankLabel: '',
+                abbreviation: '',
+                logoUrl: null
+            };
+        }
+
+        const abbreviation = String(row.abbreviation || '').trim().toUpperCase();
+        const resolvedAbbreviation = abbreviation
+            || String(row.teamName || '').trim().slice(0, 3).toUpperCase()
+            || 'TBD';
+        const includeSeedPrefix = options.includeSeedPrefix !== false;
+        const rankLabel = includeSeedPrefix ? `${seedNumber}.` : '';
+        const teamId = Number.parseInt(row?.teamId, 10);
+
+        return {
+            label: includeSeedPrefix ? `${rankLabel} ${resolvedAbbreviation}` : resolvedAbbreviation,
+            rankLabel,
+            abbreviation: resolvedAbbreviation,
+            logoUrl: Number.isFinite(teamId) && teamId > 0 ? Utils.getTeamLogoUrl(teamId) : null
+        };
+    }
+
+    createPlayoffBracketMatchCard({ title, topTeam, bottomTeam, note = '', flowLines = [] }) {
+        const card = document.createElement('article');
+        card.className = 'playoff-match-card';
+
+        const cardTitle = document.createElement('h5');
+        cardTitle.className = 'playoff-match-title';
+        cardTitle.textContent = title;
+        card.appendChild(cardTitle);
+
+        const teams = document.createElement('div');
+        teams.className = 'playoff-match-teams';
+
+        const topTeamEl = document.createElement('div');
+        topTeamEl.className = 'playoff-match-team';
+        if (topTeam && typeof topTeam === 'object') {
+            if (topTeam.rankLabel) {
+                const rank = document.createElement('span');
+                rank.className = 'playoff-match-team-rank';
+                rank.textContent = topTeam.rankLabel;
+                topTeamEl.appendChild(rank);
+            }
+
+            if (topTeam.logoUrl) {
+                const logo = document.createElement('img');
+                logo.className = 'playoff-match-team-logo';
+                logo.src = topTeam.logoUrl;
+                logo.alt = '';
+                logo.loading = 'lazy';
+                logo.decoding = 'async';
+                topTeamEl.appendChild(logo);
+            }
+
+            const text = document.createElement('span');
+            text.className = 'playoff-match-team-label';
+            text.textContent = String(topTeam.abbreviation || topTeam.label || '').trim() || 'TBD';
+            topTeamEl.appendChild(text);
+        } else {
+            topTeamEl.textContent = String(topTeam || '').trim() || 'TBD';
+        }
+
+        const bottomTeamEl = document.createElement('div');
+        bottomTeamEl.className = 'playoff-match-team';
+        if (bottomTeam && typeof bottomTeam === 'object') {
+            if (bottomTeam.rankLabel) {
+                const rank = document.createElement('span');
+                rank.className = 'playoff-match-team-rank';
+                rank.textContent = bottomTeam.rankLabel;
+                bottomTeamEl.appendChild(rank);
+            }
+
+            if (bottomTeam.logoUrl) {
+                const logo = document.createElement('img');
+                logo.className = 'playoff-match-team-logo';
+                logo.src = bottomTeam.logoUrl;
+                logo.alt = '';
+                logo.loading = 'lazy';
+                logo.decoding = 'async';
+                bottomTeamEl.appendChild(logo);
+            }
+
+            const text = document.createElement('span');
+            text.className = 'playoff-match-team-label';
+            text.textContent = String(bottomTeam.abbreviation || bottomTeam.label || '').trim() || 'TBD';
+            bottomTeamEl.appendChild(text);
+        } else {
+            bottomTeamEl.textContent = String(bottomTeam || '').trim() || 'TBD';
+        }
+
+        teams.appendChild(topTeamEl);
+        teams.appendChild(bottomTeamEl);
+        card.appendChild(teams);
+
+        if (note) {
+            const noteEl = document.createElement('p');
+            noteEl.className = 'playoff-match-note';
+            noteEl.textContent = note;
+            card.appendChild(noteEl);
+        }
+
+        if (Array.isArray(flowLines) && flowLines.length > 0) {
+            const flowWrap = document.createElement('div');
+            flowWrap.className = 'playoff-match-flow';
+
+            flowLines.forEach((line) => {
+                const normalizedLine = String(line || '').trim();
+                if (!normalizedLine) {
+                    return;
+                }
+
+                const flowLine = document.createElement('p');
+                flowLine.className = 'playoff-match-flow-line';
+                flowLine.textContent = normalizedLine;
+                flowWrap.appendChild(flowLine);
+            });
+
+            if (flowWrap.childElementCount > 0) {
+                card.appendChild(flowWrap);
+            }
+        }
+
+        return card;
+    }
+
+    createPlayoffPictureSection(title, rows) {
+        const section = document.createElement('section');
+        section.className = 'standings-conference panel-surface';
+
+        const heading = document.createElement('h4');
+        heading.textContent = title;
+        section.appendChild(heading);
+
+        const seedMap = this.buildPlayoffSeedMap(rows);
+        const isWesternConference = /western/i.test(String(title || ''));
+        const currentSeed7Team = this.getBracketTeamDisplay(seedMap, 7, {
+            includeSeedPrefix: false,
+            fallbackLabel: 'TBD'
+        });
+        const currentSeed8Team = this.getBracketTeamDisplay(seedMap, 8, {
+            includeSeedPrefix: false,
+            fallbackLabel: 'TBD'
+        });
+        const currentSeed7 = currentSeed7Team.abbreviation || currentSeed7Team.label || 'TBD';
+        const currentSeed8 = currentSeed8Team.abbreviation || currentSeed8Team.label || 'TBD';
+        const bracket = document.createElement('div');
+        bracket.className = 'standings-playoff-bracket';
+        if (isWesternConference) {
+            bracket.classList.add('standings-playoff-bracket-west');
+        }
+
+        const isPlayoffPhase = this.isPlayoffPhaseForSelectedDate();
+
+        const bracketMeta = document.createElement('p');
+        bracketMeta.className = 'standings-playoff-bracket-meta';
+        bracketMeta.textContent = isPlayoffPhase
+            ? 'Current bracket seeded from conference standings and active play-in positions.'
+            : 'Projected bracket seeded from current conference standings, including play-in paths.';
+        bracket.appendChild(bracketMeta);
+
+        const rounds = document.createElement('div');
+        rounds.className = 'standings-playoff-rounds';
+
+        const playInRound = document.createElement('section');
+        playInRound.className = 'standings-playoff-round standings-playoff-round--playin';
+        const playInHeading = document.createElement('h5');
+        playInHeading.textContent = 'Play-In';
+        playInRound.appendChild(playInHeading);
+        playInRound.appendChild(this.createPlayoffBracketMatchCard({
+            title: 'Play-In Game 1 (7 vs 8)',
+            topTeam: this.getBracketTeamDisplay(seedMap, 7),
+            bottomTeam: this.getBracketTeamDisplay(seedMap, 8),
+            note: 'Winner secures Seed 7',
+            flowLines: [
+                'Winner -> Seed 7 -> First Round vs Seed 2',
+                'Loser -> Play-In Game 3'
+            ]
+        }));
+        playInRound.appendChild(this.createPlayoffBracketMatchCard({
+            title: 'Play-In Game 2 (9 vs 10)',
+            topTeam: this.getBracketTeamDisplay(seedMap, 9),
+            bottomTeam: this.getBracketTeamDisplay(seedMap, 10),
+            note: 'Loser is eliminated',
+            flowLines: [
+                'Winner -> Play-In Game 3',
+                'Loser -> Eliminated'
+            ]
+        }));
+        playInRound.appendChild(this.createPlayoffBracketMatchCard({
+            title: 'Play-In Game 3',
+            topTeam: 'Loser of Game 1',
+            bottomTeam: 'Winner of Game 2',
+            note: 'Final play-in game for Seed 8',
+            flowLines: [
+                'Winner -> Seed 8 -> First Round vs Seed 1',
+                'Loser -> Eliminated'
+            ]
+        }));
+
+        const firstRound = document.createElement('section');
+        firstRound.className = 'standings-playoff-round standings-playoff-round--first';
+        const firstRoundHeading = document.createElement('h5');
+        firstRoundHeading.textContent = 'First Round';
+        firstRound.appendChild(firstRoundHeading);
+        firstRound.appendChild(this.createPlayoffBracketMatchCard({
+            title: 'Matchup A (1 vs 8)',
+            topTeam: this.getBracketTeamDisplay(seedMap, 1),
+            bottomTeam: 'Play-In Winner (Seed 8)',
+            flowLines: [
+                'Seed 8 spot <- Winner of Play-In Game 3',
+                `Current #8 is provisional: ${currentSeed8}`
+            ]
+        }));
+        firstRound.appendChild(this.createPlayoffBracketMatchCard({
+            title: 'Matchup B (4 vs 5)',
+            topTeam: this.getBracketTeamDisplay(seedMap, 4),
+            bottomTeam: this.getBracketTeamDisplay(seedMap, 5)
+        }));
+        firstRound.appendChild(this.createPlayoffBracketMatchCard({
+            title: 'Matchup C (3 vs 6)',
+            topTeam: this.getBracketTeamDisplay(seedMap, 3),
+            bottomTeam: this.getBracketTeamDisplay(seedMap, 6)
+        }));
+        firstRound.appendChild(this.createPlayoffBracketMatchCard({
+            title: 'Matchup D (2 vs 7)',
+            topTeam: this.getBracketTeamDisplay(seedMap, 2),
+            bottomTeam: 'Play-In Winner (Seed 7)',
+            flowLines: [
+                'Seed 7 spot <- Winner of Play-In Game 1',
+                `Current #7 is provisional: ${currentSeed7}`
+            ]
+        }));
+
+        if (isWesternConference) {
+            rounds.classList.add('standings-playoff-rounds-reverse');
+            rounds.appendChild(firstRound);
+            rounds.appendChild(playInRound);
+        } else {
+            rounds.appendChild(playInRound);
+            rounds.appendChild(firstRound);
+        }
+        bracket.appendChild(rounds);
+        section.appendChild(bracket);
+
+        return section;
+    }
+
+    updateStandingsViewButtons() {
+        const modeByButton = new Map([
+            [this.elements.standingsViewStandingsBtn, 'standings'],
+            [this.elements.standingsViewPlayoffBtn, 'playoff-picture']
+        ]);
+
+        modeByButton.forEach((mode, button) => {
+            if (!button) {
+                return;
+            }
+
+            const isActive = this.standingsViewMode === mode;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
     renderStandingsTable() {
         if (this.elements.standingsModalSubtitle) {
             const subtitleParts = [];
@@ -1134,10 +1467,22 @@ class UI {
                 subtitleParts.push(`Season: ${seasonLabel}`);
             }
 
+            if (this.standingsViewMode === 'playoff-picture') {
+                subtitleParts.push(
+                    this.isPlayoffPhaseForSelectedDate()
+                        ? 'Current playoff and play-in field (by seed).'
+                        : 'Projected playoff and play-in field based on current standings.'
+                );
+            } else {
+                subtitleParts.push('Season standings by conference.');
+            }
+
             this.elements.standingsModalSubtitle.textContent = subtitleParts.length > 0
                 ? subtitleParts.join(' | ')
                 : 'Season standings for the selected date.';
         }
+
+        this.updateStandingsViewButtons();
 
         if (!this.elements.standingsTableContainer || !this.elements.standingsTableState) {
             return;
@@ -1145,7 +1490,13 @@ class UI {
 
         this.elements.standingsTableContainer.innerHTML = '';
 
-        const standingsRows = this.buildStandingsRows();
+        this.elements.standingsTableContainer.classList.remove('standings-grid-playoff-picture');
+
+        const isPlayoffPictureMode = this.standingsViewMode === 'playoff-picture';
+        const standingsRows = isPlayoffPictureMode
+            ? this.buildPlayoffPictureRows()
+            : this.buildStandingsRows();
+
         if (this.standingsLoading) {
             this.elements.standingsTableState.textContent = 'Loading NBA standings...';
             this.elements.standingsTableState.classList.remove('hidden');
@@ -1190,8 +1541,16 @@ class UI {
 
         orderedTitles.forEach((title) => {
             const rows = groupedRows.get(title) || [];
-            this.elements.standingsTableContainer.appendChild(this.createStandingsSection(title, rows));
+            if (isPlayoffPictureMode) {
+                this.elements.standingsTableContainer.appendChild(this.createPlayoffPictureSection(title, rows));
+            } else {
+                this.elements.standingsTableContainer.appendChild(this.createStandingsSection(title, rows));
+            }
         });
+
+        if (isPlayoffPictureMode) {
+            this.elements.standingsTableContainer.classList.add('standings-grid-playoff-picture');
+        }
 
         this.elements.standingsTableState.classList.add('hidden');
         this.elements.standingsTableContainer.classList.remove('hidden');

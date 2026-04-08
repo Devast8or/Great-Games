@@ -273,6 +273,9 @@ function applyShellContent(activeSport) {
     const standingsTitle = document.getElementById('standings-modal-title');
     const closeStandingsBtn = document.getElementById('close-standings-modal');
     const openStandingsBtn = document.getElementById('open-standings');
+    const nbaStandingsViewSwitch = document.querySelector('.standings-view-switch');
+    const mlbStandingsControls = document.querySelector('.standings-modal-controls-mlb');
+    const nhlStandingsControls = document.querySelector('.standings-modal-controls-nhl');
     if (standingsTitle) {
         standingsTitle.textContent = activeSport === 'nhl'
             ? 'NHL Standings'
@@ -299,6 +302,24 @@ function applyShellContent(activeSport) {
                     ? 'Open NBA standings'
                     : 'Open MLB standings'
         );
+    }
+
+    if (nbaStandingsViewSwitch) {
+        const isNbaMode = activeSport === 'nba';
+        nbaStandingsViewSwitch.classList.toggle('hidden', !isNbaMode);
+        nbaStandingsViewSwitch.setAttribute('aria-hidden', String(!isNbaMode));
+    }
+
+    if (mlbStandingsControls) {
+        const isMlbMode = activeSport === 'mlb';
+        mlbStandingsControls.classList.toggle('hidden', !isMlbMode);
+        mlbStandingsControls.setAttribute('aria-hidden', String(!isMlbMode));
+    }
+
+    if (nhlStandingsControls) {
+        const isNhlMode = activeSport === 'nhl';
+        nhlStandingsControls.classList.toggle('hidden', !isNhlMode);
+        nhlStandingsControls.setAttribute('aria-hidden', String(!isNhlMode));
     }
 
     if (activeSport === 'nba') {

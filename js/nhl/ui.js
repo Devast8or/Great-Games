@@ -66,6 +66,7 @@ class UI {
         this.standingsSeason = null;
         this.standingsDateLabel = '';
         this.standingsLoading = false;
+        this.standingsDisplayMode = 'standings';
     }
 
     init() {
@@ -923,6 +924,71 @@ class UI {
         return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(1);
     }
 
+    normalizeStandingsDisplayMode(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        if (normalized === 'playoff-picture') {
+            return normalized;
+        }
+
+        return 'standings';
+    }
+
+    renderStandingsModeControl() {
+        if (!this.elements.standingsTableState || !this.elements.standingsTableContainer) {
+            return;
+        }
+
+        const standingsContent = this.elements.standingsTableState.parentElement;
+        if (!standingsContent) {
+            return;
+        }
+
+        let controlsRow = standingsContent.querySelector('.standings-modal-controls-nhl');
+        if (!controlsRow) {
+            controlsRow = document.createElement('div');
+            controlsRow.className = 'standings-modal-controls standings-modal-controls-nhl';
+            standingsContent.insertBefore(controlsRow, this.elements.standingsTableState);
+        }
+
+        let control = controlsRow.querySelector('.standings-league-switch-nhl');
+        if (!control) {
+            control = document.createElement('div');
+            control.className = 'standings-league-switch standings-league-switch-nhl';
+            control.setAttribute('role', 'group');
+            control.setAttribute('aria-label', 'NHL standings display mode');
+
+            [
+                { value: 'standings', label: 'Standings' },
+                { value: 'playoff-picture', label: 'Playoff Picture' }
+            ].forEach((option) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'standings-league-btn';
+                button.dataset.standingsMode = option.value;
+                button.textContent = option.label;
+                button.addEventListener('click', () => {
+                    const nextMode = this.normalizeStandingsDisplayMode(option.value);
+                    if (this.standingsDisplayMode === nextMode) {
+                        return;
+                    }
+
+                    this.standingsDisplayMode = nextMode;
+                    this.renderStandingsTable();
+                });
+                control.appendChild(button);
+            });
+
+            controlsRow.appendChild(control);
+        }
+
+        const activeMode = this.normalizeStandingsDisplayMode(this.standingsDisplayMode);
+        control.querySelectorAll('.standings-league-btn').forEach((button) => {
+            const isActive = button.dataset.standingsMode === activeMode;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
     buildStandingsHighlightMap() {
         if (!Array.isArray(this.games) || this.games.length === 0) {
             return new Map();
@@ -1122,7 +1188,314 @@ class UI {
         return section;
     }
 
+    buildNhlPlayoffPictureGroups(standingsRows = []) {
+        if (!Array.isArray(standingsRows) || standingsRows.length === 0) {
+            return [];
+        }
+
+        const conferenceOrder = ['Eastern Conference', 'Western Conference'];
+
+        const groupedByConference = standingsRows.reduce((groups, row) => {
+            if (!groups.has(row.conference)) {
+                groups.set(row.conference, []);
+            }
+
+            groups.get(row.conference).push(row);
+            return groups;
+        }, new Map());
+
+        return Array.from(groupedByConference.entries())
+            .sort((left, right) => {
+                const leftIndex = conferenceOrder.indexOf(left[0]);
+                const rightIndex = conferenceOrder.indexOf(right[0]);
+
+                if (leftIndex === -1 && rightIndex === -1) {
+                    return String(left[0]).localeCompare(String(right[0]));
+                }
+
+                if (leftIndex === -1) {
+                    return 1;
+                }
+
+                if (rightIndex === -1) {
+                    return -1;
+                }
+
+                return leftIndex - rightIndex;
+            })
+            .map(([conference, conferenceRows]) => {
+                const ordered = conferenceRows
+                    .slice()
+                    .sort((left, right) => {
+                        if (left.conferenceRank !== right.conferenceRank) {
+                            return left.conferenceRank - right.conferenceRank;
+                        }
+
+                        const leftPoints = Number.parseInt(left.points, 10);
+                        const rightPoints = Number.parseInt(right.points, 10);
+                        if (Number.isFinite(leftPoints) && Number.isFinite(rightPoints) && leftPoints !== rightPoints) {
+                            return rightPoints - leftPoints;
+                        }
+
+                        return left.teamName.localeCompare(right.teamName);
+                    })
+                    .slice(0, 8);
+
+                const seedMap = new Map();
+                ordered.forEach((row, index) => {
+                    const parsedRank = Number.parseInt(row?.conferenceRank, 10);
+                    const seed = Number.isFinite(parsedRank) && parsedRank > 0 && parsedRank <= 8
+                        ? parsedRank
+                        : index + 1;
+                    if (!seedMap.has(seed)) {
+                        seedMap.set(seed, row);
+                    }
+                });
+
+                return {
+                    title: conference,
+                    seedMap
+                };
+            });
+    }
+
+    getNhlBracketTeamDisplay(seedMap, seedNumber, options = {}) {
+        if (!(seedMap instanceof Map)) {
+            return {
+                label: options.fallbackLabel || `Seed ${seedNumber} TBD`,
+                rankLabel: '',
+                abbreviation: '',
+                logoUrl: null
+            };
+        }
+
+        const row = seedMap.get(seedNumber);
+        if (!row) {
+            return {
+                label: options.fallbackLabel || `Seed ${seedNumber} TBD`,
+                rankLabel: '',
+                abbreviation: '',
+                logoUrl: null
+            };
+        }
+
+        const abbreviation = String(row.abbreviation || '').trim().toUpperCase();
+        const normalizedAbbreviation = abbreviation.slice(0, 3);
+        const includeSeedPrefix = options.includeSeedPrefix !== false;
+        const rankLabel = includeSeedPrefix ? `${seedNumber}.` : '';
+        const resolvedAbbreviation = normalizedAbbreviation
+            || String(row.teamName || '').trim().slice(0, 3).toUpperCase()
+            || 'TBD';
+        const label = includeSeedPrefix
+            ? `${rankLabel} ${resolvedAbbreviation}`
+            : resolvedAbbreviation;
+        const teamId = Number.parseInt(row?.teamId, 10);
+
+        return {
+            label,
+            rankLabel,
+            abbreviation: resolvedAbbreviation,
+            logoUrl: Number.isFinite(teamId) && teamId > 0 ? Utils.getTeamLogoUrl(teamId) : null
+        };
+    }
+
+    createNhlBracketMatchCard({ title, topTeam, bottomTeam, note = '', flowLines = [] }) {
+        const card = document.createElement('article');
+        card.className = 'playoff-match-card';
+
+        const cardTitle = document.createElement('h5');
+        cardTitle.className = 'playoff-match-title';
+        cardTitle.textContent = title;
+        card.appendChild(cardTitle);
+
+        const teams = document.createElement('div');
+        teams.className = 'playoff-match-teams';
+
+        const topTeamEl = document.createElement('div');
+        topTeamEl.className = 'playoff-match-team';
+        if (topTeam && typeof topTeam === 'object') {
+            if (topTeam.rankLabel) {
+                const rank = document.createElement('span');
+                rank.className = 'playoff-match-team-rank';
+                rank.textContent = topTeam.rankLabel;
+                topTeamEl.appendChild(rank);
+            }
+
+            if (topTeam.logoUrl) {
+                const logo = document.createElement('img');
+                logo.className = 'playoff-match-team-logo';
+                logo.src = topTeam.logoUrl;
+                logo.alt = '';
+                logo.loading = 'lazy';
+                logo.decoding = 'async';
+                topTeamEl.appendChild(logo);
+            }
+
+            const text = document.createElement('span');
+            text.className = 'playoff-match-team-label';
+            text.textContent = String(topTeam.abbreviation || topTeam.label || '').trim() || 'TBD';
+            topTeamEl.appendChild(text);
+        } else {
+            topTeamEl.textContent = String(topTeam || '').trim() || 'TBD';
+        }
+
+        const bottomTeamEl = document.createElement('div');
+        bottomTeamEl.className = 'playoff-match-team';
+        if (bottomTeam && typeof bottomTeam === 'object') {
+            if (bottomTeam.rankLabel) {
+                const rank = document.createElement('span');
+                rank.className = 'playoff-match-team-rank';
+                rank.textContent = bottomTeam.rankLabel;
+                bottomTeamEl.appendChild(rank);
+            }
+
+            if (bottomTeam.logoUrl) {
+                const logo = document.createElement('img');
+                logo.className = 'playoff-match-team-logo';
+                logo.src = bottomTeam.logoUrl;
+                logo.alt = '';
+                logo.loading = 'lazy';
+                logo.decoding = 'async';
+                bottomTeamEl.appendChild(logo);
+            }
+
+            const text = document.createElement('span');
+            text.className = 'playoff-match-team-label';
+            text.textContent = String(bottomTeam.abbreviation || bottomTeam.label || '').trim() || 'TBD';
+            bottomTeamEl.appendChild(text);
+        } else {
+            bottomTeamEl.textContent = String(bottomTeam || '').trim() || 'TBD';
+        }
+
+        teams.appendChild(topTeamEl);
+        teams.appendChild(bottomTeamEl);
+        card.appendChild(teams);
+
+        if (note) {
+            const noteEl = document.createElement('p');
+            noteEl.className = 'playoff-match-note';
+            noteEl.textContent = note;
+            card.appendChild(noteEl);
+        }
+
+        if (Array.isArray(flowLines) && flowLines.length > 0) {
+            const flowWrap = document.createElement('div');
+            flowWrap.className = 'playoff-match-flow';
+
+            flowLines.forEach((line) => {
+                const normalizedLine = String(line || '').trim();
+                if (!normalizedLine) {
+                    return;
+                }
+
+                const flowLine = document.createElement('p');
+                flowLine.className = 'playoff-match-flow-line';
+                flowLine.textContent = normalizedLine;
+                flowWrap.appendChild(flowLine);
+            });
+
+            if (flowWrap.childElementCount > 0) {
+                card.appendChild(flowWrap);
+            }
+        }
+
+        return card;
+    }
+
+    createNhlPlayoffPictureSection(title, seedMap) {
+        const section = document.createElement('section');
+        section.className = 'standings-conference panel-surface';
+        const isWesternConference = /western/i.test(String(title || ''));
+
+        const heading = document.createElement('h4');
+        heading.textContent = title;
+        section.appendChild(heading);
+
+        const bracket = document.createElement('div');
+        bracket.className = 'standings-playoff-bracket standings-playoff-bracket-nhl';
+        if (isWesternConference) {
+            bracket.classList.add('standings-playoff-bracket-west');
+        }
+
+        const bracketMeta = document.createElement('p');
+        bracketMeta.className = 'standings-playoff-bracket-meta';
+        bracketMeta.textContent = 'Projected conference bracket from current standings seeds.';
+        bracket.appendChild(bracketMeta);
+
+        const rounds = document.createElement('div');
+        rounds.className = 'standings-playoff-rounds';
+        if (isWesternConference) {
+            rounds.classList.add('standings-playoff-rounds-reverse');
+        }
+
+        const firstRound = document.createElement('section');
+        firstRound.className = 'standings-playoff-round standings-playoff-round--round1';
+        const firstRoundHeading = document.createElement('h5');
+        firstRoundHeading.textContent = 'Round 1';
+        firstRound.appendChild(firstRoundHeading);
+        firstRound.appendChild(this.createNhlBracketMatchCard({
+            title: 'Matchup A (1 vs 8)',
+            topTeam: this.getNhlBracketTeamDisplay(seedMap, 1),
+            bottomTeam: this.getNhlBracketTeamDisplay(seedMap, 8),
+            note: 'Best of 7',
+            flowLines: ['Winner -> Round 2 Matchup 1']
+        }));
+        firstRound.appendChild(this.createNhlBracketMatchCard({
+            title: 'Matchup B (2 vs 7)',
+            topTeam: this.getNhlBracketTeamDisplay(seedMap, 2),
+            bottomTeam: this.getNhlBracketTeamDisplay(seedMap, 7),
+            note: 'Best of 7',
+            flowLines: ['Winner -> Round 2 Matchup 1']
+        }));
+        firstRound.appendChild(this.createNhlBracketMatchCard({
+            title: 'Matchup C (3 vs 6)',
+            topTeam: this.getNhlBracketTeamDisplay(seedMap, 3),
+            bottomTeam: this.getNhlBracketTeamDisplay(seedMap, 6),
+            note: 'Best of 7',
+            flowLines: ['Winner -> Round 2 Matchup 2']
+        }));
+        firstRound.appendChild(this.createNhlBracketMatchCard({
+            title: 'Matchup D (4 vs 5)',
+            topTeam: this.getNhlBracketTeamDisplay(seedMap, 4),
+            bottomTeam: this.getNhlBracketTeamDisplay(seedMap, 5),
+            note: 'Best of 7',
+            flowLines: ['Winner -> Round 2 Matchup 2']
+        }));
+
+        const secondRound = document.createElement('section');
+        secondRound.className = 'standings-playoff-round standings-playoff-round--round2';
+        const secondRoundHeading = document.createElement('h5');
+        secondRoundHeading.textContent = 'Round 2';
+        secondRound.appendChild(secondRoundHeading);
+        secondRound.appendChild(this.createNhlBracketMatchCard({
+            title: 'Round 2 Matchup 1',
+            topTeam: 'Winner of Matchup A',
+            bottomTeam: 'Winner of Matchup B',
+            note: 'Best of 7'
+        }));
+        secondRound.appendChild(this.createNhlBracketMatchCard({
+            title: 'Round 2 Matchup 2',
+            topTeam: 'Winner of Matchup C',
+            bottomTeam: 'Winner of Matchup D',
+            note: 'Best of 7'
+        }));
+
+        if (isWesternConference) {
+            rounds.appendChild(secondRound);
+            rounds.appendChild(firstRound);
+        } else {
+            rounds.appendChild(firstRound);
+            rounds.appendChild(secondRound);
+        }
+        bracket.appendChild(rounds);
+        section.appendChild(bracket);
+
+        return section;
+    }
+
     renderStandingsTable() {
+        this.renderStandingsModeControl();
+
         if (this.elements.standingsModalSubtitle) {
             const subtitleParts = [];
             if (this.standingsDateLabel) {
@@ -1132,6 +1505,10 @@ class UI {
             const seasonLabel = this.formatSeasonLabel(this.standingsSeason);
             if (seasonLabel) {
                 subtitleParts.push(`Season: ${seasonLabel}`);
+            }
+
+            if (this.normalizeStandingsDisplayMode(this.standingsDisplayMode) === 'playoff-picture') {
+                subtitleParts.push('Projected playoff bracket based on current conference seeds.');
             }
 
             this.elements.standingsModalSubtitle.textContent = subtitleParts.length > 0
@@ -1145,6 +1522,7 @@ class UI {
 
         this.elements.standingsTableContainer.innerHTML = '';
 
+        const displayMode = this.normalizeStandingsDisplayMode(this.standingsDisplayMode);
         const standingsRows = this.buildStandingsRows();
         if (this.standingsLoading) {
             this.elements.standingsTableState.textContent = 'Loading NHL standings...';
@@ -1159,6 +1537,30 @@ class UI {
             this.elements.standingsTableContainer.classList.add('hidden');
             return;
         }
+
+        if (displayMode === 'playoff-picture') {
+            this.elements.standingsTableContainer.classList.add('standings-grid-leagues');
+            const playoffGroups = this.buildNhlPlayoffPictureGroups(standingsRows);
+
+            if (playoffGroups.length === 0) {
+                this.elements.standingsTableState.textContent = 'NHL standings are unavailable for the selected date.';
+                this.elements.standingsTableState.classList.remove('hidden');
+                this.elements.standingsTableContainer.classList.add('hidden');
+                return;
+            }
+
+            playoffGroups.forEach((group) => {
+                this.elements.standingsTableContainer.appendChild(
+                    this.createNhlPlayoffPictureSection(group.title, group.seedMap)
+                );
+            });
+
+            this.elements.standingsTableState.classList.add('hidden');
+            this.elements.standingsTableContainer.classList.remove('hidden');
+            return;
+        }
+
+        this.elements.standingsTableContainer.classList.remove('standings-grid-leagues');
 
         const groupedRows = standingsRows.reduce((groups, row) => {
             if (!groups.has(row.conference)) {

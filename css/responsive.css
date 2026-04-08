@@ -105,6 +105,22 @@
     .standings-grid.standings-grid-leagues {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .standings-playoff-rounds {
+        grid-template-columns: 1fr;
+    }
+
+    .standings-playoff-round--playin .playoff-match-card::after {
+        display: none;
+    }
+
+    .standings-playoff-round--wildcard .playoff-match-card::after {
+        display: none;
+    }
+
+    .standings-playoff-round--round1 .playoff-match-card::after {
+        display: none;
+    }
 }
 
 @media (max-width: 768px) {
@@ -196,6 +212,11 @@
 
     .pitcher-stats {
         font-size: 0.68rem;
+    }
+
+    .standings-modal-controls {
+        flex-direction: column;
+        align-items: stretch;
     }
 }
 

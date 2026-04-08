@@ -114,6 +114,12 @@
                             <button id="close-standings-modal" class="filters-modal-close" aria-label="Close NBA standings">&times;</button>
                         </div>
                         <div class="standings-modal-content">
+                            <div class="standings-modal-controls" role="group" aria-label="Standings display mode">
+                                <div class="standings-view-switch">
+                                    <button id="standings-view-standings" type="button" class="standings-league-btn active" data-standings-view="standings" aria-pressed="true">Standings</button>
+                                    <button id="standings-view-playoff" type="button" class="standings-league-btn" data-standings-view="playoff-picture" aria-pressed="false">Playoff Picture</button>
+                                </div>
+                            </div>
                             <div id="standings-table-state" class="standings-table-state">Standings are hidden by default. Open this table any time for the selected date.</div>
                             <div id="standings-table-container" class="standings-grid hidden"></div>
                         </div>
